@@ -1,0 +1,156 @@
+#!/bin/bash
+
+#
+# Based upon Debian's locale-gen, fetched from glibc_2.3.6-7.diff.gz
+#
+
+unset POSIXLY_CORRECT
+umask 022
+
+argv0=${0##*/}
+source /etc/init.d/functions.sh || {
+	echo "${argv0}: Could not source /etc/init.d/functions.sh!" 1>&2
+	exit 1
+}
+
+show_usage() {
+	cat <<-EOF
+	Usage: ${HILITE}${argv0}${NORMAL} ${GOOD}[options]${NORMAL}
+
+	Generate locales based upon the config file /etc/locale.gen.
+
+	${HILITE}Options:${NORMAL}
+	    ${GOOD}-k, --keep${NORMAL}             Don't nuke existing locales
+	    ${GOOD}-d, --destdir <dir>${NORMAL}    Use locale data in specified DESTDIR tree
+	    ${GOOD}-c, --config <config>${NORMAL}  Use specified config instead of default locale.gen
+	    ${GOOD}-l, --list${NORMAL}             List all the locales to be generated
+	    ${GOOD}-q, --quiet${NORMAL}            Only show errors
+	    ${GOOD}-V, --version${NORMAL}          Meaningless version information
+	    ${GOOD}-h, --help${NORMAL}             Show this help cruft
+
+	For more info, see the ${HILITE}locale-gen${NORMAL}(1) and ${HILITE}locale.gen${NORMAL}(8) manpages.
+	EOF
+	[[ -z $@ ]] && exit 0
+	echo ""
+	eerror "Unknown option '$1'"
+	exit 1
+}
+show_version() {
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.1 2006/04/17 08:10:24 vapier Exp $"
+	cvsver=${cvsver##*locale-gen-}
+	echo "locale-gen-${cvsver%%,v *}"
+	exit 0
+}
+
+
+
+KEEP=""
+DESTDIR=""
+CONFIG=""
+JUST_LIST=""
+QUIET=0
+while [[ -n $1 ]] ; do
+	case $1 in
+		-k|--keep|--keep-existing) KEEP=$1;;
+		-d|--destdir)              shift; DESTDIR=$1;;
+		-c|--config)               shift; CONFIG=$1;;
+		-l|--list)                 JUST_LIST=$1;;
+		-q|--quiet)                ((++QUIET));;
+		-V|--version)              show_version;;
+		-h|--help)                 show_usage;;
+		*)                         show_usage $1;;
+	esac
+	shift
+done
+
+ROOT=${ROOT:-/}
+[[ ${ROOT} != */ ]] && ROOT="${ROOT}/"
+if [[ -n ${DESTDIR} ]] && [[ ${ROOT} != "/" ]] ; then
+	eerror "DESTDIR and ROOT are mutually exclusive options"
+	exit 1
+fi
+if [[ ${ROOT} != "/" ]] ; then
+	einfo "Using locale.gen from ROOT ${ROOT}etc/"
+fi
+if [[ -n ${DESTDIR} ]] ; then
+	einfo "Building locales in DESTDIR ${DESTDIR}"
+else
+	DESTDIR=${ROOT}
+fi
+
+# XXX: should fix this ...
+if [[ ${DESTDIR} != "/" || ${ROOT} != "/" ]] ; then
+	eerror "Sorry, but DESTDIR/ROOT support is incomplete at this time."
+	exit 0
+fi
+
+LOCALEGEN=${CONFIG:-${ROOT}etc/locale.gen}
+LOCALES=${DESTDIR}usr/share/i18n/locales
+CHARMAPS=${DESTDIR}usr/share/i18n/charmaps
+SUPPORTED=${DESTDIR}usr/share/i18n/SUPPORTED
+ALIAS=${DESTDIR}usr/share/locale/locale.alias
+LOCALEDIR=${DESTDIR}$(localedef --help | sed -n -e '/locale path/{s|.* : ||;s|:.*||;p}')
+
+
+
+mkdir -p "${LOCALEDIR}"
+if [[ -z ${KEEP} ]] ; then
+	# Remove all old locale dir and locale-archive before generating new
+	# locale data.
+	rm -rf "${LOCALEDIR}"/* || true
+fi
+
+
+
+[[ -s ${LOCALEGEN} ]] || exit 0
+
+[[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
+einfo "Generating locales (this might take a while)"
+
+ret=0
+while read locale charmap ; do
+
+	# XXX: if we wanted to, we could check existence of
+	#      ${LOCALES}/${locale} and ${CHARMAPS}/${charmap}
+	#      this would fail for things like "en_US.UTF8", but
+	#      in that case we could fall back to checking the
+	#      SUPPORTED file ... then again, the localedef
+	#      below will abort nicely for us ...
+	if [[ -z ${locale} || -z ${charmap} ]] ; then
+		eerror "Bad entry in locale.gen: '${locale} ${charmap}'; skipping"
+		continue
+	fi
+
+	# These funky sed's are copied from the glibc localedata/Makefile
+	disp=$(echo ${locale} | sed 's/\([^.\@]*\).*/\1/')
+	disp=${disp}.${charmap}
+	disp=${disp}$(echo ${locale} | sed 's/\([^\@]*\)\(\@.*\)*/\2/')
+
+	if [[ -f ${LOCALES}/${locale} ]] ; then
+		input=${locale}
+	else
+		input=$(echo ${locale} | sed 's/\([^.]*\)[^@]*\(.*\)/\1\2/')
+	fi
+
+	if [[ -z ${JUST_LIST} ]] ; then
+		[[ ${QUIET} -eq 0 ]] && ebegin " Generating ${disp}"
+		localedef --no-archive -c \
+			-i "${input}" \
+			-f "${charmap}" \
+			-A "${ALIAS}" \
+			"${locale}"
+		my_ret=$?
+		((ret+=my_ret))
+		[[ ${QUIET} -eq 0 ]] && eend ${my_ret}
+	else
+		echo "${disp}"
+	fi
+done < <(sed \
+	-e 's:#.*::' \
+	-e '/^[[:space:]]*$/d' \
+	"${LOCALEGEN}")
+
+[[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
+einfo "Generation complete"
+
+exit ${ret}
