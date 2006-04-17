@@ -36,7 +36,7 @@ show_usage() {
 	exit 1
 }
 show_version() {
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.1 2006/04/17 08:10:24 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.2 2006/04/17 16:48:56 vapier Exp $"
 	cvsver=${cvsver##*locale-gen-}
 	echo "locale-gen-${cvsver%%,v *}"
 	exit 0
@@ -93,6 +93,20 @@ LOCALEDIR=${DESTDIR}$(localedef --help | sed -n -e '/locale path/{s|.* : ||;s|:.
 
 
 
+[[ -s ${LOCALEGEN} ]] || exit 0
+
+locales_to_generate=$(sed \
+	-e 's:#.*::' \
+	-e '/^[[:space:]]*$/d' \
+	"${LOCALEGEN}")
+total=$(echo "${locales_to_generate}" | wc -l)
+
+if [[ -z ${locales_to_generate} ]] ; then
+	[[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
+		ewarn "No locales found"
+	exit 0
+fi
+
 mkdir -p "${LOCALEDIR}"
 if [[ -z ${KEEP} ]] ; then
 	# Remove all old locale dir and locale-archive before generating new
@@ -100,16 +114,14 @@ if [[ -z ${KEEP} ]] ; then
 	rm -rf "${LOCALEDIR}"/* || true
 fi
 
-
-
-[[ -s ${LOCALEGEN} ]] || exit 0
-
 [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
-einfo "Generating locales (this might take a while)"
+einfo "Generating ${total} locales (this might take a while)"
 
 ret=0
+cnt=0
 while read locale charmap ; do
 
+	((++cnt))
 	# XXX: if we wanted to, we could check existence of
 	#      ${LOCALES}/${locale} and ${CHARMAPS}/${charmap}
 	#      this would fail for things like "en_US.UTF8", but
@@ -133,7 +145,7 @@ while read locale charmap ; do
 	fi
 
 	if [[ -z ${JUST_LIST} ]] ; then
-		[[ ${QUIET} -eq 0 ]] && ebegin " Generating ${disp}"
+		[[ ${QUIET} -eq 0 ]] && ebegin " (${cnt}/${total}) Generating ${disp}"
 		localedef --no-archive -c \
 			-i "${input}" \
 			-f "${charmap}" \
@@ -145,10 +157,7 @@ while read locale charmap ; do
 	else
 		echo "${disp}"
 	fi
-done < <(sed \
-	-e 's:#.*::' \
-	-e '/^[[:space:]]*$/d' \
-	"${LOCALEGEN}")
+done < <(echo "${locales_to_generate}")
 
 [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
 einfo "Generation complete"
