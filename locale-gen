@@ -36,7 +36,7 @@ show_usage() {
 	exit 1
 }
 show_version() {
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.2 2006/04/17 16:48:56 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.3 2006/04/18 22:47:39 vapier Exp $"
 	cvsver=${cvsver##*locale-gen-}
 	echo "locale-gen-${cvsver%%,v *}"
 	exit 0
@@ -93,6 +93,12 @@ LOCALEDIR=${DESTDIR}$(localedef --help | sed -n -e '/locale path/{s|.* : ||;s|:.
 
 
 
+if [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
+   [[ -e ${ROOT}etc/locales.build ]]
+then
+	ewarn "You should upgrade your /etc/locales.build to /etc/locale.gen"
+	ewarn "and then remove /etc/locales.build when you're done.\n"
+fi
 [[ -s ${LOCALEGEN} ]] || exit 0
 
 locales_to_generate=$(sed \
