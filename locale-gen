@@ -4,8 +4,8 @@
 # Based upon Debian's locale-gen, fetched from glibc_2.3.6-7.diff.gz
 #
 
-unset POSIXLY_CORRECT
-umask 022
+unset POSIXLY_CORRECT IFS
+umask 0022
 
 argv0=${0##*/}
 source /etc/init.d/functions.sh || {
@@ -15,7 +15,7 @@ source /etc/init.d/functions.sh || {
 
 show_usage() {
 	cat <<-EOF
-	Usage: ${HILITE}${argv0}${NORMAL} ${GOOD}[options]${NORMAL}
+	Usage: ${HILITE}${argv0}${NORMAL} ${GOOD}[options]${NORMAL} -- ${GOOD}[localedef options]${NORMAL}
 
 	Generate locales based upon the config file /etc/locale.gen.
 
@@ -24,9 +24,14 @@ show_usage() {
 	    ${GOOD}-d, --destdir <dir>${NORMAL}    Use locale data in specified DESTDIR tree
 	    ${GOOD}-c, --config <config>${NORMAL}  Use specified config instead of default locale.gen
 	    ${GOOD}-l, --list${NORMAL}             List all the locales to be generated
+	    ${GOOD}-a, --ask${NORMAL}              Ask before generating each locale
+	    ${GOOD}-u, --update${NORMAL}           Only generate locales that are missing
 	    ${GOOD}-q, --quiet${NORMAL}            Only show errors
 	    ${GOOD}-V, --version${NORMAL}          Meaningless version information
 	    ${GOOD}-h, --help${NORMAL}             Show this help cruft
+
+	${HILITE}Localedef Options:${NORMAL}
+	    By default, ${GOOD}${LOCALEDEF_OPTS}${NORMAL} is passed to localedef.
 
 	For more info, see the ${HILITE}locale-gen${NORMAL}(1) and ${HILITE}locale.gen${NORMAL}(8) manpages.
 	EOF
@@ -36,7 +41,7 @@ show_usage() {
 	exit 1
 }
 show_version() {
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.3 2006/04/18 22:47:39 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.4 2006/04/19 22:37:33 vapier Exp $"
 	cvsver=${cvsver##*locale-gen-}
 	echo "locale-gen-${cvsver%%,v *}"
 	exit 0
@@ -44,10 +49,13 @@ show_version() {
 
 
 
+LOCALEDEF_OPTS="--no-archive -c"
 KEEP=""
 DESTDIR=""
 CONFIG=""
 JUST_LIST=""
+ASK=""
+UPDATE=""
 QUIET=0
 while [[ -n $1 ]] ; do
 	case $1 in
@@ -55,13 +63,17 @@ while [[ -n $1 ]] ; do
 		-d|--destdir)              shift; DESTDIR=$1;;
 		-c|--config)               shift; CONFIG=$1;;
 		-l|--list)                 JUST_LIST=$1;;
+		-a|--ask)                  ASK=$1;;
+		-u|--update)               UPDATE=$1;;
 		-q|--quiet)                ((++QUIET));;
 		-V|--version)              show_version;;
 		-h|--help)                 show_usage;;
+		--)                        shift; LOCALEDEF_OPTS=$*; break;;
 		*)                         show_usage $1;;
 	esac
 	shift
 done
+KEEP=${KEEP:-${UPDATE}}
 
 ROOT=${ROOT:-/}
 [[ ${ROOT} != */ ]] && ROOT="${ROOT}/"
@@ -105,7 +117,8 @@ locales_to_generate=$(sed \
 	-e 's:#.*::' \
 	-e '/^[[:space:]]*$/d' \
 	"${LOCALEGEN}")
-total=$(echo "${locales_to_generate}" | wc -l)
+set -- ${locales_to_generate}
+total=$(($#/2))
 
 if [[ -z ${locales_to_generate} ]] ; then
 	[[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
@@ -120,14 +133,32 @@ if [[ -z ${KEEP} ]] ; then
 	rm -rf "${LOCALEDIR}"/* || true
 fi
 
+normalize() {
+	if [[ $1 == *.* ]] ; then
+		local ret=$(echo ${1##*.} | tr '[[:upper:]]' '[[:lower:]]')
+		echo ${1%%.*}.${ret//-}
+	else
+		echo $1
+	fi
+}
+
 [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
 einfo "Generating ${total} locales (this might take a while)"
 
 ret=0
 cnt=0
-while read locale charmap ; do
 
+if [[ -n ${UPDATE} ]] ; then
+	# normalize newlines into spaces
+	existing_locales=" $(echo $(locale -a)) "
+fi
+
+while [[ -n $1 ]] ; do
 	((++cnt))
+	locale=$1
+	charmap=$2
+	shift ; shift
+
 	# XXX: if we wanted to, we could check existence of
 	#      ${LOCALES}/${locale} and ${CHARMAPS}/${charmap}
 	#      this would fail for things like "en_US.UTF8", but
@@ -144,6 +175,13 @@ while read locale charmap ; do
 	disp=${disp}.${charmap}
 	disp=${disp}$(echo ${locale} | sed 's/\([^\@]*\)\(\@.*\)*/\2/')
 
+	if [[ -n ${UPDATE} ]] && \
+	   [[ ${existing_locales} == *" $(normalize ${locale}) "* ]]
+	then
+		[[ ${QUIET} -eq 0 ]] && einfo " (${cnt}/${total}) Skipping ${disp}"
+		continue
+	fi
+
 	if [[ -f ${LOCALES}/${locale} ]] ; then
 		input=${locale}
 	else
@@ -151,19 +189,25 @@ while read locale charmap ; do
 	fi
 
 	if [[ -z ${JUST_LIST} ]] ; then
-		[[ ${QUIET} -eq 0 ]] && ebegin " (${cnt}/${total}) Generating ${disp}"
-		localedef --no-archive -c \
+		if [[ -n ${ASK} ]] ; then
+			einfon " (${cnt}/${total}) Generate ${disp} ? (Y/n) "
+			read user_answer
+			[[ ${user_answer} == [nN]* ]] && continue
+		elif [[ ${QUIET} -eq 0 ]] ; then
+			ebegin " (${cnt}/${total}) Generating ${disp}"
+		fi
+		localedef ${LOCALEDEF_OPTS} \
 			-i "${input}" \
 			-f "${charmap}" \
 			-A "${ALIAS}" \
 			"${locale}"
 		my_ret=$?
 		((ret+=my_ret))
-		[[ ${QUIET} -eq 0 ]] && eend ${my_ret}
+		[[ -z ${ASK} ]] && [[ ${QUIET} -eq 0 ]] && eend ${my_ret}
 	else
 		echo "${disp}"
 	fi
-done < <(echo "${locales_to_generate}")
+done
 
 [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
 einfo "Generation complete"
