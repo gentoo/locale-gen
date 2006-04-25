@@ -41,7 +41,7 @@ show_usage() {
 	exit 1
 }
 show_version() {
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.4 2006/04/19 22:37:33 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.5 2006/04/25 00:29:54 vapier Exp $"
 	cvsver=${cvsver##*locale-gen-}
 	echo "locale-gen-${cvsver%%,v *}"
 	exit 0
@@ -73,7 +73,7 @@ while [[ -n $1 ]] ; do
 	esac
 	shift
 done
-KEEP=${KEEP:-${UPDATE}}
+KEEP=${KEEP:-${UPDATE:-${JUST_LIST}}}
 
 ROOT=${ROOT:-/}
 [[ ${ROOT} != */ ]] && ROOT="${ROOT}/"
