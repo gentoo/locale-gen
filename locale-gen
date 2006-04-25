@@ -41,7 +41,7 @@ show_usage() {
 	exit 1
 }
 show_version() {
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.5 2006/04/25 00:29:54 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.6 2006/04/25 00:31:48 vapier Exp $"
 	cvsver=${cvsver##*locale-gen-}
 	echo "locale-gen-${cvsver%%,v *}"
 	exit 0
@@ -101,6 +101,9 @@ LOCALES=${DESTDIR}usr/share/i18n/locales
 CHARMAPS=${DESTDIR}usr/share/i18n/charmaps
 SUPPORTED=${DESTDIR}usr/share/i18n/SUPPORTED
 ALIAS=${DESTDIR}usr/share/locale/locale.alias
+
+# Extract the location of the locale dir on the fly as `localedef --help` has:
+#                        locale path    : /usr/lib64/locale:/usr/share/i18n
 LOCALEDIR=${DESTDIR}$(localedef --help | sed -n -e '/locale path/{s|.* : ||;s|:.*||;p}')
 
 
@@ -133,6 +136,9 @@ if [[ -z ${KEEP} ]] ; then
 	rm -rf "${LOCALEDIR}"/* || true
 fi
 
+# Transform the name in locales.gen to the name used when storing
+# the locale data in /usr/lib/locale/ ... this normalize algo is
+# taken out of the glibc localedef source code ...
 normalize() {
 	if [[ $1 == *.* ]] ; then
 		local ret=$(echo ${1##*.} | tr '[[:upper:]]' '[[:lower:]]')
@@ -182,6 +188,7 @@ while [[ -n $1 ]] ; do
 		continue
 	fi
 
+	# If the locale is like 'en_US.UTF8', then we really want 'en_US'
 	if [[ -f ${LOCALES}/${locale} ]] ; then
 		input=${locale}
 	else
