@@ -41,7 +41,7 @@ show_usage() {
 	exit 1
 }
 show_version() {
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.6 2006/04/25 00:31:48 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.7 2006/04/25 00:43:06 vapier Exp $"
 	cvsver=${cvsver##*locale-gen-}
 	echo "locale-gen-${cvsver%%,v *}"
 	exit 0
@@ -114,7 +114,6 @@ then
 	ewarn "You should upgrade your /etc/locales.build to /etc/locale.gen"
 	ewarn "and then remove /etc/locales.build when you're done.\n"
 fi
-[[ -s ${LOCALEGEN} ]] || exit 0
 
 locales_to_generate=$(sed \
 	-e 's:#.*::' \
@@ -124,9 +123,29 @@ set -- ${locales_to_generate}
 total=$(($#/2))
 
 if [[ -z ${locales_to_generate} ]] ; then
-	[[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
-		ewarn "No locales found"
-	exit 0
+	# Maybe they have /etc/locales.build setup still ...
+	if [[ ${LOCALEGEN} == */etc/locale.gen ]] ; then
+		LOCALEGEN=${LOCALEGEN/%locale.gen/locales.build}
+		locales_to_generate=$(sed \
+			-e 's:#.*::' \
+			-e '/^[[:space:]]*$/d' \
+			-e 's:/: :g' \
+			"${LOCALEGEN}")
+		set -- ${locales_to_generate}
+		total=$(($#/2))
+		if [[ -n ${locales_to_generate} ]] && \
+		   [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]]
+		then
+			ewarn "Automatically importing locales from /etc/locales.build ..."
+			ewarn "You really should do this yourself ...\n"
+		fi
+	fi
+
+	if [[ -z ${locales_to_generate} ]] ; then
+		[[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
+			ewarn "No locales found"
+		exit 0
+	fi
 fi
 
 mkdir -p "${LOCALEDIR}"
