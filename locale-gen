@@ -41,7 +41,7 @@ show_usage() {
 	exit 1
 }
 show_version() {
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.9 2006/04/30 15:39:09 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.10 2006/05/06 00:30:04 vapier Exp $"
 	cvsver=${cvsver##*locale-gen-}
 	echo "locale-gen-${cvsver%%,v *}"
 	exit 0
@@ -104,7 +104,7 @@ ALIAS=${DESTDIR}usr/share/locale/locale.alias
 
 # Extract the location of the locale dir on the fly as `localedef --help` has:
 #                        locale path    : /usr/lib64/locale:/usr/share/i18n
-LOCALEDIR=${DESTDIR}$(localedef --help | sed -n -e '/locale path/{s|.* : ||;s|:.*||;p}')
+LOCALEDIR=${DESTDIR}$(LC_ALL="C" localedef --help | sed -n -e '/locale path/{s|.* : ||;s|:.*||;p}')
 if [[ $? -ne 0 ]] || [[ -z ${LOCALEDIR} ]] || [[ ${LOCALEDIR} != ${DESTDIR}/usr/lib*/locale ]] ; then
 	eerror "Unable to parse the output of your localedef utility." 1>&2
 	eerror "File a bug about this issue and include the output of 'localedef --help'." 1>&2
