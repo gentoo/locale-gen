@@ -41,7 +41,7 @@ show_usage() {
 	exit 1
 }
 show_version() {
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.11 2006/05/07 05:04:49 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.12 2006/06/11 16:38:33 vapier Exp $"
 	cvsver=${cvsver##*locale-gen-}
 	echo "locale-gen-${cvsver%%,v *}"
 	exit 0
@@ -132,11 +132,13 @@ if [[ -z ${locales_to_generate} ]] ; then
 	# Maybe they have /etc/locales.build setup still ...
 	if [[ ${LOCALEGEN} == */etc/locale.gen ]] ; then
 		LOCALEGEN=${LOCALEGEN/%locale.gen/locales.build}
-		locales_to_generate=$(sed \
-			-e 's:#.*::' \
-			-e '/^[[:space:]]*$/d' \
-			-e 's:/: :g' \
-			"${LOCALEGEN}")
+		if [[ -e ${LOCALEGEN} ]] ; then
+			locales_to_generate=$(sed \
+				-e 's:#.*::' \
+				-e '/^[[:space:]]*$/d' \
+				-e 's:/: :g' \
+				"${LOCALEGEN}")
+		fi
 		if [[ -n ${locales_to_generate} ]] && \
 		   [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]]
 		then
