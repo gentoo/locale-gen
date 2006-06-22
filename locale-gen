@@ -41,7 +41,7 @@ show_usage() {
 	exit 1
 }
 show_version() {
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.12 2006/06/11 16:38:33 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.13 2006/06/22 05:38:10 vapier Exp $"
 	cvsver=${cvsver##*locale-gen-}
 	echo "locale-gen-${cvsver%%,v *}"
 	exit 0
@@ -129,7 +129,25 @@ if [[ -e ${LOCALEGEN} ]] ; then
 fi
 
 if [[ -z ${locales_to_generate} ]] ; then
-	# Maybe they have /etc/locales.build setup still ...
+	#
+	# NOTE: begin retarded situation
+	# if user does not have locale.gen setup, but they have a
+	# locales.build, and they have USE=-userlocales, then they
+	# probably have the default locales.build file.  the problem
+	# with this is the default locales.build had a bunch of
+	# uncommented locales, so the resulting system will end up
+	# with only a few locales and the user will be left wondering
+	# wtf just happened.  so our hack logic here is:
+	#  - if we are outside of ebuild (i.e. user ran us) then go for it
+	#  - if we are inside of ebuild and USE=-userlocales, then just bail
+	#
+
+	# if these vars are set we just assume in ebuild
+	if [[ ${PN} == "glibc" && -n ${FILESDIR} && -n ${D} ]] ; then
+		has() { [[ " ${*:2} " == *" $1 "* ]] ; }
+		! has userlocales ${USE} && LOCALEGEN=""
+	fi
+
 	if [[ ${LOCALEGEN} == */etc/locale.gen ]] ; then
 		LOCALEGEN=${LOCALEGEN/%locale.gen/locales.build}
 		if [[ -e ${LOCALEGEN} ]] ; then
