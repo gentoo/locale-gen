@@ -41,7 +41,7 @@ show_usage() {
 	exit 1
 }
 show_version() {
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.14 2006/08/19 16:17:52 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.15 2006/08/19 16:23:15 vapier Exp $"
 	cvsver=${cvsver##*locale-gen-}
 	echo "locale-gen-${cvsver%%,v *}"
 	exit 0
@@ -238,7 +238,10 @@ while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
 	if [[ -n ${UPDATE} ]] && \
 	   [[ ${existing_locales} == *" $(normalize ${locale}) "* ]]
 	then
-		[[ ${QUIET} -eq 0 ]] && einfo " (${cnt}/${total}) Skipping ${disp}"
+		if [[ ${QUIET} -eq 0 ]] ; then
+			cnt_fmt=$(printf "%${#total}i" ${cnt})
+			einfo " (${cnt_fmt}/${total}) Skipping ${disp}"
+		fi
 		continue
 	fi
 
@@ -251,11 +254,13 @@ while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
 
 	if [[ -z ${JUST_LIST} ]] ; then
 		if [[ -n ${ASK} ]] ; then
-			einfon " (${cnt}/${total}) Generate ${disp} ? (Y/n) "
+			cnt_fmt=$(printf "%${#total}i" ${cnt})
+			einfon " (${cnt_fmt}/${total}) Generate ${disp} ? (Y/n) "
 			read user_answer
 			[[ ${user_answer} == [nN]* ]] && continue
 		elif [[ ${QUIET} -eq 0 ]] ; then
-			ebegin " (${cnt}/${total}) Generating ${disp}"
+			cnt_fmt=$(printf "%${#total}i" ${cnt})
+			ebegin " (${cnt_fmt}/${total}) Generating ${disp}"
 		fi
 		localedef ${LOCALEDEF_OPTS} \
 			-i "${input}" \
