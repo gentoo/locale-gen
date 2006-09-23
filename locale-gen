@@ -26,6 +26,7 @@ show_usage() {
 	    ${GOOD}-l, --list${NORMAL}             List all the locales to be generated
 	    ${GOOD}-a, --ask${NORMAL}              Ask before generating each locale
 	    ${GOOD}-u, --update${NORMAL}           Only generate locales that are missing
+	    ${GOOD}-j, --jobs${NORMAL}             Number of locales to generate at a time (parallel)
 	    ${GOOD}-q, --quiet${NORMAL}            Only show errors
 	    ${GOOD}-V, --version${NORMAL}          Meaningless version information
 	    ${GOOD}-h, --help${NORMAL}             Show this help cruft
@@ -41,7 +42,7 @@ show_usage() {
 	exit 1
 }
 show_version() {
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.15 2006/08/19 16:23:15 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.16 2006/09/23 14:28:41 vapier Exp $"
 	cvsver=${cvsver##*locale-gen-}
 	echo "locale-gen-${cvsver%%,v *}"
 	exit 0
@@ -57,6 +58,7 @@ JUST_LIST=""
 ASK=""
 UPDATE=""
 QUIET=0
+JOBS_MAX=1
 while [[ -n $1 ]] ; do
 	case $1 in
 		-k|--keep|--keep-existing) KEEP=$1;;
@@ -65,6 +67,7 @@ while [[ -n $1 ]] ; do
 		-l|--list)                 JUST_LIST=$1;;
 		-a|--ask)                  ASK=$1;;
 		-u|--update)               UPDATE=$1;;
+		-j|--jobs)                 shift; JOBS_MAX=$(($1));;
 		-q|--quiet)                ((++QUIET));;
 		-V|--version)              show_version;;
 		-h|--help)                 show_usage;;
@@ -206,7 +209,7 @@ eval declare -a locales_to_generate=(${locales_to_generate})
 total=$((${#locales_to_generate[*]}/2))
 
 [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
-einfo "Generating ${total} locales (this might take a while)"
+einfo "Generating ${total} locales (this might take a while) with ${JOBS_MAX} jobs"
 
 ret=0
 cnt=0
@@ -216,6 +219,57 @@ if [[ -n ${UPDATE} ]] ; then
 	existing_locales=" $(echo $(locale -a 2>/dev/null)) "
 fi
 
+generate_locale() {
+	local ret=0
+	local output=""
+
+	if [[ -z ${ASK} ]] && [[ ${QUIET} -eq 0 ]] ; then
+		output=" (${cnt_fmt}/${total}) Generating ${disp}"
+	fi
+
+	if [[ ${JOBS_MAX} > 1 ]] ; then
+		if [[ ${JOB_COUNT} == ${JOBS_MAX} ]] ; then
+			wait ${JOBS[${JOB_IDX}]}
+			ret=$?
+			((--JOB_COUNT))
+		fi
+		(
+			# Accumulate all the output in one go so the parallel
+			# jobs don't tromp on each other
+			x=$(
+				[[ -n ${output} ]] && ebegin "${output}"
+				localedef ${LOCALEDEF_OPTS} \
+					-i "${input}" \
+					-f "${charmap}" \
+					-A "${ALIAS}" \
+					"${locale}" 2>&1
+				ret=$?
+				[[ -n ${output} ]] && eend ${ret}
+				exit ${ret}
+			)
+			ret=$?
+			echo "${x}"
+			exit ${ret}
+		) &
+		JOBS[${JOB_IDX}]=$!
+		JOB_IDX=$(((JOB_IDX + 1) % JOBS_MAX))
+		((++JOB_COUNT))
+	else
+		[[ -n ${output} ]] && ebegin "${output}"
+		localedef ${LOCALEDEF_OPTS} \
+			-i "${input}" \
+			-f "${charmap}" \
+			-A "${ALIAS}" \
+			"${locale}"
+		ret=$?
+		[[ -n ${output} ]] && eend ${ret}
+	fi
+	return ${ret}
+}
+
+JOBS=()
+JOB_IDX=0
+JOB_COUNT=0
 lidx=0
 while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
 	((++cnt))
@@ -253,27 +307,28 @@ while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
 	fi
 
 	if [[ -z ${JUST_LIST} ]] ; then
+		# Format the output for the question/status
+		cnt_fmt=$(printf "%${#total}i" ${cnt})
 		if [[ -n ${ASK} ]] ; then
-			cnt_fmt=$(printf "%${#total}i" ${cnt})
 			einfon " (${cnt_fmt}/${total}) Generate ${disp} ? (Y/n) "
 			read user_answer
 			[[ ${user_answer} == [nN]* ]] && continue
-		elif [[ ${QUIET} -eq 0 ]] ; then
-			cnt_fmt=$(printf "%${#total}i" ${cnt})
-			ebegin " (${cnt_fmt}/${total}) Generating ${disp}"
 		fi
-		localedef ${LOCALEDEF_OPTS} \
-			-i "${input}" \
-			-f "${charmap}" \
-			-A "${ALIAS}" \
-			"${locale}"
-		my_ret=$?
-		((ret+=my_ret))
-		[[ -z ${ASK} ]] && [[ ${QUIET} -eq 0 ]] && eend ${my_ret}
+		generate_locale
+		((ret+=$?))
 	else
 		echo "${disp}"
 	fi
 done
+
+if [[ ${JOBS_MAX} > 1 ]] ; then
+	while [[ ${JOB_COUNT} > 0 ]] ; do
+		wait ${JOBS[${JOB_IDX}]}
+		((ret+=$?))
+		((--JOB_COUNT))
+		((++JOB_IDX))
+	done
+fi
 
 [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
 einfo "Generation complete"
