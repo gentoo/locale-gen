@@ -42,9 +42,10 @@ show_usage() {
 	exit 1
 }
 show_version() {
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.16 2006/09/23 14:28:41 vapier Exp $"
-	cvsver=${cvsver##*locale-gen-}
-	echo "locale-gen-${cvsver%%,v *}"
+	local Header=""
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.17 2006/10/03 05:28:08 vapier Exp $"
+	cvsver=${cvsver##*locale-gen,v }
+	echo "locale-gen-${cvsver%% *}"
 	exit 0
 }
 
