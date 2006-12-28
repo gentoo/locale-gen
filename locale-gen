@@ -25,6 +25,7 @@ show_usage() {
 	    ${GOOD}-c, --config <config>${NORMAL}  Use specified config instead of default locale.gen
 	    ${GOOD}-l, --list${NORMAL}             List all the locales to be generated
 	    ${GOOD}-a, --ask${NORMAL}              Ask before generating each locale
+	    ${GOOD}-A, --all${NORMAL}              Pretend the locale list contains all locales
 	    ${GOOD}-u, --update${NORMAL}           Only generate locales that are missing
 	    ${GOOD}-j, --jobs${NORMAL}             Number of locales to generate at a time (parallel)
 	    ${GOOD}-q, --quiet${NORMAL}            Only show errors
@@ -43,7 +44,7 @@ show_usage() {
 }
 show_version() {
 	local Header=""
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.17 2006/10/03 05:28:08 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.18 2006/12/28 19:27:31 vapier Exp $"
 	cvsver=${cvsver##*locale-gen,v }
 	echo "locale-gen-${cvsver%% *}"
 	exit 0
@@ -57,6 +58,7 @@ DESTDIR=""
 CONFIG=""
 JUST_LIST=""
 ASK=""
+ALL=""
 UPDATE=""
 QUIET=0
 JOBS_MAX=1
@@ -67,6 +69,7 @@ while [[ -n $1 ]] ; do
 		-c|--config)               shift; CONFIG=$1;;
 		-l|--list)                 JUST_LIST=$1;;
 		-a|--ask)                  ASK=$1;;
+		-A|--all)                  ALL=$1;;
 		-u|--update)               UPDATE=$1;;
 		-j|--jobs)                 shift; JOBS_MAX=$(($1));;
 		-q|--quiet)                ((++QUIET));;
@@ -105,6 +108,8 @@ LOCALES=${DESTDIR}usr/share/i18n/locales
 CHARMAPS=${DESTDIR}usr/share/i18n/charmaps
 SUPPORTED=${DESTDIR}usr/share/i18n/SUPPORTED
 ALIAS=${DESTDIR}usr/share/locale/locale.alias
+
+[[ -n ${ALL} ]] && LOCALEGEN=${SUPPORTED}
 
 # Extract the location of the locale dir on the fly as `localedef --help` has:
 #                        locale path    : /usr/lib64/locale:/usr/share/i18n
