@@ -27,7 +27,7 @@ show_usage() {
 	    ${GOOD}-a, --ask${NORMAL}              Ask before generating each locale
 	    ${GOOD}-A, --all${NORMAL}              Pretend the locale list contains all locales
 	    ${GOOD}-u, --update${NORMAL}           Only generate locales that are missing
-	    ${GOOD}-j, --jobs${NORMAL}             Number of locales to generate at a time (parallel)
+	    ${GOOD}-j, --jobs <num>${NORMAL}       Number of locales to generate at a time (parallel)
 	    ${GOOD}-q, --quiet${NORMAL}            Only show errors
 	    ${GOOD}-V, --version${NORMAL}          Meaningless version information
 	    ${GOOD}-h, --help${NORMAL}             Show this help cruft
@@ -44,7 +44,7 @@ show_usage() {
 }
 show_version() {
 	local Header=""
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.21 2007/01/29 05:56:40 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.22 2007/01/29 07:28:27 vapier Exp $"
 	cvsver=${cvsver##*locale-gen,v }
 	echo "locale-gen-${cvsver%% *}"
 	exit 0
@@ -66,7 +66,7 @@ JOBS_MAX=1
 while [[ -n $1 ]] ; do
 	case $1 in
 		-k|--keep|--keep-existing) KEEP=$1;;
-		-d|--destdir)              shift; DESTDIR=$1;;
+		-d|--destdir)              shift; DESTDIR=$1; unset ROOT;;
 		-c|--config)               shift; CONFIG=$1;;
 		-l|--list)                 JUST_LIST=$1;;
 		-a|--ask)                  ASK=$1;;
@@ -97,28 +97,28 @@ if [[ ${ROOT} != "/" ]] ; then
 	einfo "Using locale.gen from ROOT ${ROOT}etc/"
 fi
 if [[ -n ${DESTDIR} ]] ; then
-	einfo "Building locales in DESTDIR ${DESTDIR}"
+	einfo "Building locales in DESTDIR '${DESTDIR}'"
 else
 	DESTDIR=${ROOT}
 fi
 
 # XXX: should fix this ...
-if [[ ${DESTDIR} != "/" || ${ROOT} != "/" ]] ; then
-	eerror "Sorry, but DESTDIR/ROOT support is incomplete at this time."
+if [[ ${ROOT} != "/" ]] ; then
+	eerror "Sorry, but ROOT support is incomplete at this time."
 	exit 0
 fi
 
-LOCALEGEN=${CONFIG:-${ROOT}etc/locale.gen}
+CONFIG=${CONFIG:-${ROOT}etc/locale.gen}
 LOCALES=${DESTDIR}usr/share/i18n/locales
 CHARMAPS=${DESTDIR}usr/share/i18n/charmaps
 SUPPORTED=${DESTDIR}usr/share/i18n/SUPPORTED
 ALIAS=${DESTDIR}usr/share/locale/locale.alias
 
-[[ -n ${ALL} ]] && LOCALEGEN=${SUPPORTED}
+[[ -n ${ALL} ]] && CONFIG=${SUPPORTED}
 
 # Extract the location of the locale dir on the fly as `localedef --help` has:
 #                        locale path    : /usr/lib64/locale:/usr/share/i18n
-LOCALEDIR=${DESTDIR}$(LC_ALL="C" localedef --help | sed -n -e '/locale path/{s|.* : ||;s|:.*||;p}')
+LOCALEDIR=${DESTDIR}$(LC_ALL="C" "${DESTDIR}"usr/bin/localedef --help | sed -n -e '/locale path/{s|.* : ||;s|:.*||;p}')
 if [[ $? -ne 0 ]] || [[ -z ${LOCALEDIR} ]] || [[ ${LOCALEDIR} != ${DESTDIR}/usr/lib*/locale ]] ; then
 	eerror "Unable to parse the output of your localedef utility." 1>&2
 	eerror "File a bug about this issue and include the output of 'localedef --help'." 1>&2
@@ -135,11 +135,11 @@ then
 fi
 
 locales_to_generate=""
-if [[ -e ${LOCALEGEN} ]] ; then
+if [[ -e ${CONFIG} ]] ; then
 	locales_to_generate=$(sed \
 		-e 's:#.*::' \
 		-e '/^[[:space:]]*$/d' \
-		"${LOCALEGEN}")
+		"${CONFIG}")
 fi
 
 if [[ -z ${locales_to_generate} ]] ; then
@@ -159,17 +159,17 @@ if [[ -z ${locales_to_generate} ]] ; then
 	# if these vars are set we just assume in ebuild
 	if [[ ${PN} == "glibc" && -n ${FILESDIR} && -n ${D} ]] ; then
 		has() { [[ " ${*:2} " == *" $1 "* ]] ; }
-		! has userlocales ${USE} && LOCALEGEN=""
+		! has userlocales ${USE} && CONFIG=""
 	fi
 
-	if [[ ${LOCALEGEN} == */etc/locale.gen ]] ; then
-		LOCALEGEN=${LOCALEGEN/%locale.gen/locales.build}
-		if [[ -e ${LOCALEGEN} ]] ; then
+	if [[ ${CONFIG} == */etc/locale.gen ]] ; then
+		CONFIG=${CONFIG/%locale.gen/locales.build}
+		if [[ -e ${CONFIG} ]] ; then
 			locales_to_generate=$(sed \
 				-e 's:#.*::' \
 				-e '/^[[:space:]]*$/d' \
 				-e 's:/: :g' \
-				"${LOCALEGEN}")
+				"${CONFIG}")
 		fi
 		if [[ -n ${locales_to_generate} ]] && \
 		   [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]]
@@ -249,10 +249,11 @@ generate_locale() {
 			# jobs don't tromp on each other
 			x=$(
 				[[ -n ${output} ]] && ebegin "${output}"
-				localedef ${LOCALEDEF_OPTS} \
+				"${DESTDIR}"usr/bin/localedef ${LOCALEDEF_OPTS} \
 					-i "${input}" \
 					-f "${charmap}" \
 					-A "${ALIAS}" \
+					--prefix "${DESTDIR}" \
 					"${locale}" 2>&1
 				ret=$?
 				[[ -n ${output} ]] && eend ${ret}
@@ -267,10 +268,11 @@ generate_locale() {
 		((++JOB_COUNT))
 	else
 		[[ -n ${output} ]] && ebegin "${output}"
-		localedef ${LOCALEDEF_OPTS} \
+		"${DESTDIR}"usr/bin/localedef ${LOCALEDEF_OPTS} \
 			-i "${input}" \
 			-f "${charmap}" \
 			-A "${ALIAS}" \
+			--prefix "${DESTDIR}" \
 			"${locale}"
 		ret=$?
 		[[ -n ${output} ]] && eend ${ret}
