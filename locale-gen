@@ -44,7 +44,7 @@ show_usage() {
 }
 show_version() {
 	local Header=""
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.20 2007/01/29 05:45:35 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.21 2007/01/29 05:56:40 vapier Exp $"
 	cvsver=${cvsver##*locale-gen,v }
 	echo "locale-gen-${cvsver%% *}"
 	exit 0
@@ -73,6 +73,7 @@ while [[ -n $1 ]] ; do
 		-A|--all)                  ALL=$1;;
 		-u|--update)               UPDATE=$1;;
 		-j|--jobs)                 shift; JOBS_MAX=$(($1));;
+		-j*)                       JOBS_MAX=$((${1#-j}));;
 		-q|--quiet)                ((++QUIET));;
 		-x|--debug)                SET_X="true";;
 		-V|--version)              show_version;;
@@ -82,6 +83,7 @@ while [[ -n $1 ]] ; do
 	esac
 	shift
 done
+[[ ${JOBS_MAX} -lt 1 ]] && JOBS_MAX=1
 [[ -n ${SET_X} ]] && set -x
 KEEP=${KEEP:-${JUST_LIST}}
 
