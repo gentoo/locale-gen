@@ -44,7 +44,7 @@ show_usage() {
 }
 show_version() {
 	local Header=""
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.19 2007/01/26 16:48:15 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.20 2007/01/29 05:45:35 vapier Exp $"
 	cvsver=${cvsver##*locale-gen,v }
 	echo "locale-gen-${cvsver%% *}"
 	exit 0
@@ -61,6 +61,7 @@ ASK=""
 ALL=""
 UPDATE=""
 QUIET=0
+SET_X=""
 JOBS_MAX=1
 while [[ -n $1 ]] ; do
 	case $1 in
@@ -73,6 +74,7 @@ while [[ -n $1 ]] ; do
 		-u|--update)               UPDATE=$1;;
 		-j|--jobs)                 shift; JOBS_MAX=$(($1));;
 		-q|--quiet)                ((++QUIET));;
+		-x|--debug)                SET_X="true";;
 		-V|--version)              show_version;;
 		-h|--help)                 show_usage;;
 		--)                        shift; LOCALEDEF_OPTS=$*; break;;
@@ -80,7 +82,8 @@ while [[ -n $1 ]] ; do
 	esac
 	shift
 done
-KEEP=${KEEP:-${UPDATE:-${JUST_LIST}}}
+[[ -n ${SET_X} ]] && set -x
+KEEP=${KEEP:-${JUST_LIST}}
 
 ROOT=${ROOT:-/}
 [[ ${ROOT} != */ ]] && ROOT="${ROOT}/"
@@ -182,9 +185,9 @@ if [[ -z ${locales_to_generate} ]] ; then
 fi
 
 mkdir -p "${LOCALEDIR}"
-if [[ -z ${KEEP} ]] ; then
+if [[ -z ${KEEP} && -z ${UPDATE} ]] ; then
 	# Remove all old locale dir and locale-archive before generating new
-	# locale data.
+	# locale data.  Scrubbing via update is done elsewhere.
 	rm -rf "${LOCALEDIR}"/* || true
 fi
 
@@ -300,14 +303,16 @@ while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
 
 	disp=${locales_disp[$((cnt-1))]}
 
-	if [[ -n ${UPDATE} ]] && \
-	   [[ ${existing_locales} == *" $(normalize ${locale}) "* ]]
-	then
-		if [[ ${QUIET} -eq 0 ]] ; then
-			cnt_fmt=$(printf "%${#total}i" ${cnt})
-			einfo " (${cnt_fmt}/${total}) Skipping ${disp}"
+	if [[ -n ${UPDATE} ]] ; then
+		normalized_locale=$(normalize ${locale})
+		if [[ ${existing_locales} == *" ${normalized_locale} "* ]] ; then
+			existing_locales=${existing_locales/ ${normalized_locale} / }
+			if [[ ${QUIET} -eq 0 ]] ; then
+				cnt_fmt=$(printf "%${#total}i" ${cnt})
+				einfo " (${cnt_fmt}/${total}) Skipping ${disp}"
+			fi
+			continue
 		fi
-		continue
 	fi
 
 	# If the locale is like 'en_US.UTF8', then we really want 'en_US'
@@ -343,5 +348,20 @@ fi
 
 [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
 einfo "Generation complete"
+
+# Remove locales that existed but were not requested
+if [[ -n ${UPDATE} ]] ; then
+	# Ignore these pseudo locales
+	existing_locales=${existing_locales/ C / }
+	existing_locales=${existing_locales/ POSIX / }
+	if [[ -n ${existing_locales// } ]] ; then
+		if [[ -z ${KEEP} ]] ; then
+			[[ ${QUIET} -eq 0 ]] && einfo "Scrubbing old locales:"${existing_locales}
+			cd "${LOCALEDIR}" && rm -rf ${existing_locales}
+		else
+			[[ ${QUIET} -eq 0 ]] && einfo "Keeping old locales:"${existing_locales}
+		fi
+	fi
+fi
 
 exit ${ret}
