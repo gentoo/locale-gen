@@ -20,17 +20,18 @@ show_usage() {
 	Generate locales based upon the config file /etc/locale.gen.
 
 	${HILITE}Options:${NORMAL}
-	    ${GOOD}-k, --keep${NORMAL}             Don't nuke existing locales
-	    ${GOOD}-d, --destdir <dir>${NORMAL}    Use locale data in specified DESTDIR tree
-	    ${GOOD}-c, --config <config>${NORMAL}  Use specified config instead of default locale.gen
-	    ${GOOD}-l, --list${NORMAL}             List all the locales to be generated
-	    ${GOOD}-a, --ask${NORMAL}              Ask before generating each locale
-	    ${GOOD}-A, --all${NORMAL}              Pretend the locale list contains all locales
-	    ${GOOD}-u, --update${NORMAL}           Only generate locales that are missing
-	    ${GOOD}-j, --jobs <num>${NORMAL}       Number of locales to generate at a time (parallel)
-	    ${GOOD}-q, --quiet${NORMAL}            Only show errors
-	    ${GOOD}-V, --version${NORMAL}          Meaningless version information
-	    ${GOOD}-h, --help${NORMAL}             Show this help cruft
+	    ${GOOD}-k, --keep${NORMAL}               Don't nuke existing locales
+	    ${GOOD}-d, --destdir <dir>${NORMAL}      Use locale data in specified DESTDIR tree
+	    ${GOOD}-c, --config <config>${NORMAL}    Use specified config instead of default locale.gen
+	    ${GOOD}-l, --list${NORMAL}               List all the locales to be generated
+	    ${GOOD}-a, --ask${NORMAL}                Ask before generating each locale
+	    ${GOOD}-A, --all${NORMAL}                Pretend the locale list contains all locales
+	    ${GOOD}-u, --update${NORMAL}             Only generate locales that are missing
+	    ${GOOD}-G, --generate <locale>${NORMAL}  Generate specified locale (one shot)
+	    ${GOOD}-j, --jobs <num>${NORMAL}         Number of locales to generate at a time (parallel)
+	    ${GOOD}-q, --quiet${NORMAL}              Only show errors
+	    ${GOOD}-V, --version${NORMAL}            Meaningless version information
+	    ${GOOD}-h, --help${NORMAL}               Show this help cruft
 
 	${HILITE}Localedef Options:${NORMAL}
 	    By default, ${GOOD}${LOCALEDEF_OPTS}${NORMAL} is passed to localedef.
@@ -44,7 +45,7 @@ show_usage() {
 }
 show_version() {
 	local Header=""
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.22 2007/01/29 07:28:27 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.23 2007/07/22 21:25:15 vapier Exp $"
 	cvsver=${cvsver##*locale-gen,v }
 	echo "locale-gen-${cvsver%% *}"
 	exit 0
@@ -60,9 +61,10 @@ JUST_LIST=""
 ASK=""
 ALL=""
 UPDATE=""
+GENERATE=""
+JOBS_MAX=1
 QUIET=0
 SET_X=""
-JOBS_MAX=1
 while [[ -n $1 ]] ; do
 	case $1 in
 		-k|--keep|--keep-existing) KEEP=$1;;
@@ -72,6 +74,7 @@ while [[ -n $1 ]] ; do
 		-a|--ask)                  ASK=$1;;
 		-A|--all)                  ALL=$1;;
 		-u|--update)               UPDATE=$1;;
+		-G|--generate)             shift; GENERATE=$1;;
 		-j|--jobs)                 shift; JOBS_MAX=$(($1));;
 		-j*)                       JOBS_MAX=$((${1#-j}));;
 		-q|--quiet)                ((++QUIET));;
@@ -86,6 +89,7 @@ done
 [[ ${JOBS_MAX} -lt 1 ]] && JOBS_MAX=1
 [[ -n ${SET_X} ]] && set -x
 KEEP=${KEEP:-${JUST_LIST}}
+[[ -n ${GENERATE} ]] && UPDATE="true" && KEEP="true"
 
 ROOT=${ROOT:-/}
 [[ ${ROOT} != */ ]] && ROOT="${ROOT}/"
@@ -134,8 +138,9 @@ then
 	ewarn "and then remove /etc/locales.build when you're done.\n"
 fi
 
-locales_to_generate=""
-if [[ -e ${CONFIG} ]] ; then
+locales_to_generate=${GENERATE}
+
+if [[ -z ${locales_to_generate} ]] && [[ -e ${CONFIG} ]] ; then
 	locales_to_generate=$(sed \
 		-e 's:#.*::' \
 		-e '/^[[:space:]]*$/d' \
