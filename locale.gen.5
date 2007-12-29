@@ -35,6 +35,12 @@ The
 command will generate all the locales, placing them in
 \fB/usr/lib/locale\fP.
 
+Comments start with the hash mark # and may only be on new lines.
+
+Options start with #% (to preserve backwards compatibility).  The only option
+currently recognized is \fIno-locale-archive\fR.  This will disable generation
+of the locale archive file and instead generate multiple files/directories for
+each locale.
 .SH "SEE ALSO"
 .BR locale-gen (8),
 .BR localedef (1),

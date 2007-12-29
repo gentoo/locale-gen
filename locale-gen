@@ -45,7 +45,7 @@ show_usage() {
 }
 show_version() {
 	local Header=""
-	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.23 2007/07/22 21:25:15 vapier Exp $"
+	local cvsver="$Header: /var/cvsroot/gentoo/src/patchsets/glibc/extra/locale/locale-gen,v 1.24 2007/12/29 21:34:46 vapier Exp $"
 	cvsver=${cvsver##*locale-gen,v }
 	echo "locale-gen-${cvsver%% *}"
 	exit 0
@@ -53,7 +53,7 @@ show_version() {
 
 
 
-LOCALEDEF_OPTS="--no-archive -c"
+LOCALEDEF_OPTS="-c"
 KEEP=""
 DESTDIR=""
 CONFIG=""
@@ -65,6 +65,7 @@ GENERATE=""
 JOBS_MAX=1
 QUIET=0
 SET_X=""
+LOCALE_ARCHIVE=true
 while [[ -n $1 ]] ; do
 	case $1 in
 		-k|--keep|--keep-existing) KEEP=$1;;
@@ -117,6 +118,32 @@ LOCALES=${DESTDIR}usr/share/i18n/locales
 CHARMAPS=${DESTDIR}usr/share/i18n/charmaps
 SUPPORTED=${DESTDIR}usr/share/i18n/SUPPORTED
 ALIAS=${DESTDIR}usr/share/locale/locale.alias
+
+#
+# Grab any user options in their config file
+options=$(sed -n \
+	-e '/^[[:space:]]*#%/s:^[[:space:]]*#%[[:space:]]*::p'\
+	"${CONFIG}"
+)
+IFS=$'\n'
+for option in ${options} ; do
+	case ${option} in
+		no-locale-archive)
+			LOCALE_ARCHIVE=false
+			;;
+		*)
+			ewarn "Unrecognized option '${option}'"
+			;;
+	esac
+done
+unset IFS
+
+if ${LOCALE_ARCHIVE} ; then
+	if [[ ${JOBS_MAX} != 1 ]] ; then
+		ewarn "Generating locale-archive: forcing # of jobs to 1"
+		JOBS_MAX=1
+	fi
+fi
 
 [[ -n ${ALL} ]] && CONFIG=${SUPPORTED}
 
