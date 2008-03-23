@@ -45,7 +45,7 @@ show_usage() {
 }
 show_version() {
 	local b="(" a=")"
-	local cvsver="$Revision: 1.25 $b $Date: 2008/03/23 13:16:19 $a"
+	local cvsver="$Revision: 1.26 $b $Date: 2008/03/23 13:17:00 $a"
 	echo "locale-gen-${cvsver//: }"
 	exit 0
 }
@@ -271,8 +271,9 @@ generate_locale() {
 
 	if [[ ${JOBS_MAX} > 1 ]] ; then
 		if [[ ${JOB_COUNT} == ${JOBS_MAX} ]] ; then
-			wait ${JOBS[${JOB_IDX}]}
-			ret=$?
+			wait ${JOB_PIDS[${JOB_IDX_S}]}
+			JOB_RETS[${JOB_IDX_S}]=$?
+			((++JOB_IDX_S))
 			((--JOB_COUNT))
 		fi
 		(
@@ -294,8 +295,8 @@ generate_locale() {
 			echo "${x}"
 			exit ${ret}
 		) &
-		JOBS[${JOB_IDX}]=$!
-		JOB_IDX=$(((JOB_IDX + 1) % JOBS_MAX))
+		JOB_PIDS[${JOB_IDX_E}]=$!
+		((++JOB_IDX_E))
 		((++JOB_COUNT))
 	else
 		[[ -n ${output} ]] && ebegin "${output}"
@@ -316,8 +317,10 @@ generate_locale() {
 	return ${ret}
 }
 
-JOBS=()
-JOB_IDX=0
+JOB_PIDS=()
+JOB_RETS=()
+JOB_IDX_S=0
+JOB_IDX_E=0
 JOB_COUNT=0
 lidx=0
 while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
@@ -372,12 +375,16 @@ while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
 	fi
 done
 
-if [[ ${JOBS_MAX} > 1 ]] ; then
-	while [[ ${JOB_COUNT} > 0 ]] ; do
-		wait ${JOBS[${JOB_IDX}]}
+if [[ ${JOBS_MAX} -gt 1 ]] ; then
+	i=0
+	while [[ ${i} -lt ${JOB_IDX_S} ]] ; do
+		((ret+=${JOB_RETS[${i}]}))
+		((++i))
+	done
+	while [[ ${JOB_IDX_S} -lt ${JOB_IDX_E} ]] ; do
+		wait ${JOB_PIDS[${JOB_IDX_S}]}
 		((ret+=$?))
-		((--JOB_COUNT))
-		((++JOB_IDX))
+		((++JOB_IDX_S))
 	done
 fi
 
