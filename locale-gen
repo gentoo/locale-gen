@@ -27,7 +27,7 @@ show_usage() {
 	    ${GOOD}-a, --ask${NORMAL}                Ask before generating each locale
 	    ${GOOD}-A, --all${NORMAL}                Pretend the locale list contains all locales
 	    ${GOOD}-u, --update${NORMAL}             Only generate locales that are missing
-	    ${GOOD}-G, --generate <locale>${NORMAL}  Generate specified locale (one shot)
+	    ${GOOD}-G, --generate <locale>${NORMAL}  Generate specified locale (one shot; implies -k -u)
 	    ${GOOD}-j, --jobs <num>${NORMAL}         Number of locales to generate at a time (parallel)
 	    ${GOOD}-q, --quiet${NORMAL}              Only show errors
 	    ${GOOD}-V, --version${NORMAL}            Meaningless version information
@@ -45,7 +45,7 @@ show_usage() {
 }
 show_version() {
 	local b="(" a=")"
-	local cvsver="$Revision: 1.27 $b $Date: 2008/09/07 06:42:44 $a"
+	local cvsver="$Revision: 1.28 $b $Date: 2011/08/17 21:41:09 $a"
 	echo "locale-gen-${cvsver//: }"
 	exit 0
 }
