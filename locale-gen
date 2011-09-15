@@ -45,7 +45,7 @@ show_usage() {
 }
 show_version() {
 	local b="(" a=")"
-	local cvsver="$Revision: 1.28 $b $Date: 2011/08/17 21:41:09 $a"
+	local cvsver="$Revision: 1.29 $b $Date: 2011/09/15 17:31:00 $a"
 	echo "locale-gen-${cvsver//: }"
 	exit 0
 }
@@ -88,10 +88,10 @@ while [[ -n $1 ]] ; do
 done
 [[ ${JOBS_MAX} -lt 1 ]] && JOBS_MAX=1
 [[ -n ${SET_X} ]] && set -x
-KEEP=${KEEP:-${JUST_LIST}}
+: ${KEEP:=${JUST_LIST}}
 [[ -n ${GENERATE} ]] && UPDATE="true" && KEEP="true"
 
-ROOT=${ROOT:-/}
+: ${ROOT:=/}
 [[ ${ROOT} != */ ]] && ROOT="${ROOT}/"
 if [[ -n ${DESTDIR} ]] && [[ ${ROOT} != "/" ]] ; then
 	eerror "DESTDIR and ROOT are mutually exclusive options"
@@ -112,7 +112,7 @@ if [[ ${ROOT} != "/" ]] ; then
 	exit 0
 fi
 
-CONFIG=${CONFIG:-${ROOT}etc/locale.gen}
+: ${CONFIG:=${ROOT}etc/locale.gen}
 LOCALES=${DESTDIR}usr/share/i18n/locales
 CHARMAPS=${DESTDIR}usr/share/i18n/charmaps
 SUPPORTED=${DESTDIR}usr/share/i18n/SUPPORTED
