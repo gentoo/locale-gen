@@ -45,7 +45,7 @@ show_usage() {
 }
 show_version() {
 	local b="(" a=")"
-	local cvsver="$Revision: 1.29 $b $Date: 2011/09/15 17:31:00 $a"
+	local cvsver="$Revision: 1.30 $b $Date: 2011/09/15 17:46:23 $a"
 	echo "locale-gen-${cvsver//: }"
 	exit 0
 }
@@ -142,6 +142,8 @@ if ${LOCALE_ARCHIVE} ; then
 		ewarn "Generating locale-archive: forcing # of jobs to 1"
 		JOBS_MAX=1
 	fi
+else
+	LOCALEDEF_OPTS="--no-archive ${LOCALEDEF_OPTS}"
 fi
 
 [[ -n ${ALL} ]] && CONFIG=${SUPPORTED}
