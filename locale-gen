@@ -45,7 +45,7 @@ show_usage() {
 }
 show_version() {
 	local b="(" a=")"
-	local cvsver="$Revision: 1.30 $b $Date: 2011/09/15 17:46:23 $a"
+	local cvsver="$Revision: 1.31 $b $Date: 2011/11/20 22:01:00 $a"
 	echo "locale-gen-${cvsver//: }"
 	exit 0
 }
@@ -75,9 +75,9 @@ while [[ -n $1 ]] ; do
 		-A|--all)                  ALL=$1;;
 		-u|--update)               UPDATE=$1;;
 		-G|--generate)             shift; GENERATE=$1;;
-		-j|--jobs)                 shift; JOBS_MAX=$(($1));;
-		-j*)                       JOBS_MAX=$((${1#-j}));;
-		-q|--quiet)                ((++QUIET));;
+		-j|--jobs)                 shift; JOBS_MAX=$(( $1 ));;
+		-j*)                       : $(( JOBS_MAX = ${1#-j} ));;
+		-q|--quiet)                : $(( ++QUIET ));;
 		-x|--debug)                SET_X="true";;
 		-V|--version)              show_version;;
 		-h|--help)                 show_usage;;
@@ -250,13 +250,10 @@ locales_disp=$(echo "${locales_to_generate}" | sed \
 
 eval declare -a locales_disp=(${locales_disp})
 eval declare -a locales_to_generate=(${locales_to_generate})
-total=$((${#locales_to_generate[*]}/2))
+total=$(( ${#locales_to_generate[*]} / 2 ))
 
 [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
 einfo "Generating ${total} locales (this might take a while) with ${JOBS_MAX} jobs"
-
-ret=0
-cnt=0
 
 if [[ -n ${UPDATE} ]] ; then
 	# normalize newlines into spaces
@@ -264,69 +261,51 @@ if [[ -n ${UPDATE} ]] ; then
 fi
 
 generate_locale() {
-	local ret=0
 	local output=""
 
 	if [[ -z ${ASK} ]] && [[ ${QUIET} -eq 0 ]] ; then
 		output=" (${cnt_fmt}/${total}) Generating ${disp}"
 	fi
 
-	if [[ ${JOBS_MAX} > 1 ]] ; then
-		if [[ ${JOB_COUNT} == ${JOBS_MAX} ]] ; then
-			wait ${JOB_PIDS[${JOB_IDX_S}]}
-			JOB_RETS[${JOB_IDX_S}]=$?
-			((++JOB_IDX_S))
-			((--JOB_COUNT))
-		fi
-		(
-			# Accumulate all the output in one go so the parallel
-			# jobs don't tromp on each other
-			x=$(
-				[[ -n ${output} ]] && ebegin "${output}"
-				"${DESTDIR}"usr/bin/localedef ${LOCALEDEF_OPTS} \
-					-i "${input}" \
-					-f "${charmap}" \
-					-A "${ALIAS}" \
-					--prefix "${DESTDIR}" \
-					"${locale}" 2>&1
-				ret=$?
-				[[ -n ${output} ]] && eend ${ret}
-				exit ${ret}
-			)
-			ret=$?
-			echo "${x}"
-			exit ${ret}
-		) &
-		JOB_PIDS[${JOB_IDX_E}]=$!
-		((++JOB_IDX_E))
-		((++JOB_COUNT))
-	else
-		[[ -n ${output} ]] && ebegin "${output}"
-		"${DESTDIR}"usr/bin/localedef ${LOCALEDEF_OPTS} \
-			-i "${input}" \
-			-f "${charmap}" \
-			-A "${ALIAS}" \
-			--prefix "${DESTDIR}" \
-			"${locale}"
-		ret=$?
-		[[ -n ${output} ]] && eend ${ret}
+	if [[ $(( JOB_IDX_E - JOB_IDX_S )) == ${JOBS_MAX} ]] ; then
+		wait ${JOB_PIDS[$(( JOB_IDX_S++ ))]}
+		JOB_RETS+=( $? )
 	fi
+	(
+		# Accumulate all the output in one go so the parallel
+		# jobs don't tromp on each other
+		x=$(
+			[[ -n ${output} ]] && ebegin "${output}"
+			"${DESTDIR}"usr/bin/localedef ${LOCALEDEF_OPTS} \
+				-i "${input}" \
+				-f "${charmap}" \
+				-A "${ALIAS}" \
+				--prefix "${DESTDIR}" \
+				"${locale}" 2>&1
+			ret=$?
+			[[ -n ${output} ]] && eend ${ret}
+			exit ${ret}
+		)
+		ret=$?
+		echo "${x}"
+		exit ${ret}
+	) &
+	JOB_PIDS+=( $! )
+	: $(( ++JOB_IDX_E ))
 
 	if [[ ${ret} != 0 && ${locale} == */* ]] ; then
 		ewarn "Perhaps you meant to use a space instead of a / in your config file ?"
 	fi
-
-	return ${ret}
 }
 
 JOB_PIDS=()
 JOB_RETS=()
 JOB_IDX_S=0
 JOB_IDX_E=0
-JOB_COUNT=0
+cnt=0
 lidx=0
 while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
-	((++cnt))
+	: $(( ++cnt ))
 	locale=${locales_to_generate[$((lidx++))]}
 	charmap=${locales_to_generate[$((lidx++))]}
 
@@ -341,7 +320,7 @@ while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
 		continue
 	fi
 
-	disp=${locales_disp[$((cnt-1))]}
+	disp=${locales_disp[$(( cnt - 1 ))]}
 
 	if [[ -n ${UPDATE} ]] ; then
 		normalized_locale=$(normalize ${locale})
@@ -371,24 +350,16 @@ while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
 			[[ ${user_answer} == [nN]* ]] && continue
 		fi
 		generate_locale
-		((ret+=$?))
 	else
 		echo "${disp}"
 	fi
 done
 
-if [[ ${JOBS_MAX} -gt 1 ]] ; then
-	i=0
-	while [[ ${i} -lt ${JOB_IDX_S} ]] ; do
-		((ret+=${JOB_RETS[${i}]}))
-		((++i))
-	done
-	while [[ ${JOB_IDX_S} -lt ${JOB_IDX_E} ]] ; do
-		wait ${JOB_PIDS[${JOB_IDX_S}]}
-		((ret+=$?))
-		((++JOB_IDX_S))
-	done
-fi
+for (( i = JOB_IDX_S; i < JOB_IDX_E; ++i )) ; do
+	wait ${JOB_PIDS[$(( i++ ))]}
+	JOB_RETS+=( $? )
+done
+ret=$(( 0 ${JOB_RETS[@]/#/+} ))
 
 [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
 einfo "Generation complete"
