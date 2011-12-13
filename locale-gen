@@ -45,7 +45,7 @@ show_usage() {
 }
 show_version() {
 	local b="(" a=")"
-	local cvsver="$Revision: 1.31 $b $Date: 2011/11/20 22:01:00 $a"
+	local cvsver="$Revision: 1.32 $b $Date: 2011/12/13 21:15:03 $a"
 	echo "locale-gen-${cvsver//: }"
 	exit 0
 }
@@ -287,7 +287,7 @@ generate_locale() {
 			exit ${ret}
 		)
 		ret=$?
-		echo "${x}"
+		[[ -n ${output} ]] && echo "${x}"
 		exit ${ret}
 	) &
 	JOB_PIDS+=( $! )
