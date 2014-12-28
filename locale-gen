@@ -14,8 +14,9 @@ if [[ ${EPREFIX} == "@"GENTOO_PORTAGE_EPREFIX"@" ]] ; then
 	EPREFIX=""
 fi
 
-source "${EPREFIX}"/etc/init.d/functions.sh || {
-	echo "${argv0}: Could not source /etc/init.d/functions.sh!" 1>&2
+FUNCTIONS_SH="/lib/gentoo/functions.sh"
+source "${EPREFIX}"${FUNCTIONS_SH} || {
+	echo "${argv0}: Could not source ${FUNCTIONS_SH}!" 1>&2
 	exit 1
 }
 
@@ -51,7 +52,7 @@ show_usage() {
 }
 show_version() {
 	local b="(" a=")"
-	local cvsver="$Revision: 1.35 $b $Date: 2014/06/13 22:07:18 $a"
+	local cvsver="$Revision: 1.36 $b $Date: 2014/12/28 18:45:18 $a"
 	echo "locale-gen-${cvsver//: }"
 	exit 0
 }
