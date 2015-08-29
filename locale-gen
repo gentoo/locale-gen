@@ -52,7 +52,7 @@ show_usage() {
 }
 show_version() {
 	local b="(" a=")"
-	local cvsver="$Revision: 1.37 $b $Date: 2015/07/21 02:28:16 $a"
+	local cvsver="$Revision: 1.38 $b $Date: 2015/08/29 04:44:58 $a"
 	echo "locale-gen-${cvsver//: }"
 	exit 0
 }
@@ -185,13 +185,13 @@ if [[ -z ${locales_to_generate} ]] && [[ -e ${CONFIG} ]] ; then
 		-e '/^[[:space:]]*$/d' \
 		"${CONFIG}" | sort)
 	# Sanity check to make sure people did not duplicate entries. #550884
+	# The first column must be unique specifically. #235555
 	dup_locales_to_generate=$(
 		echo "${locales_to_generate}" | \
-			uniq -c | \
-			awk '$1 != "1" {$1 = ""; print}')
+			awk '{ if ($1 == last) { print lastline; print; } else { lastline = $0; last = $1; } }')
 	if [[ -n ${dup_locales_to_generate} ]] ; then
 		ewarn "These locales have been duplicated in your config:\n${dup_locales_to_generate}"
-		ewarn "They will be filtered, but you should still fix."
+		ewarn "Some might be filtered, but you must fix it."
 		locales_to_generate=$(echo "${locales_to_generate}" | uniq)
 	fi
 fi
