@@ -52,7 +52,7 @@ show_usage() {
 }
 show_version() {
 	local b="(" a=")"
-	local cvsver="$Revision: 1.38 $b $Date: 2015/08/29 04:44:58 $a"
+	local cvsver="$Revision: 1.39 $b $Date: 2015/08/29 23:05:43 $a"
 	echo "locale-gen-${cvsver//: }"
 	exit 0
 }
@@ -168,15 +168,7 @@ if [[ $? -ne 0 ]] || [[ -z ${LOCALEDIR} ]] || [[ ${LOCALEDIR} != ${DESTDIR}/usr/
 	exit 1
 fi
 
-
-
-if [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
-   [[ -e ${EROOT}etc/locales.build ]]
-then
-	ewarn "You should upgrade your /etc/locales.build to /etc/locale.gen"
-	ewarn "and then remove /etc/locales.build when you're done.\n"
-fi
-
+# Only generate locales the user specified before falling back to the config.
 locales_to_generate=${GENERATE}
 
 if [[ -z ${locales_to_generate} ]] && [[ -e ${CONFIG} ]] ; then
@@ -197,47 +189,9 @@ if [[ -z ${locales_to_generate} ]] && [[ -e ${CONFIG} ]] ; then
 fi
 
 if [[ -z ${locales_to_generate} ]] ; then
-	#
-	# NOTE: begin retarded situation
-	# if user does not have locale.gen setup, but they have a
-	# locales.build, and they have USE=-userlocales, then they
-	# probably have the default locales.build file.  the problem
-	# with this is the default locales.build had a bunch of
-	# uncommented locales, so the resulting system will end up
-	# with only a few locales and the user will be left wondering
-	# wtf just happened.  so our hack logic here is:
-	#  - if we are outside of ebuild (i.e. user ran us) then go for it
-	#  - if we are inside of ebuild and USE=-userlocales, then just bail
-	#
-
-	# if these vars are set we just assume in ebuild
-	if [[ ${PN} == "glibc" && -n ${FILESDIR} && -n ${D} ]] ; then
-		has() { [[ " ${*:2} " == *" $1 "* ]] ; }
-		! has userlocales ${USE} && CONFIG=""
-	fi
-
-	if [[ ${CONFIG} == */etc/locale.gen ]] ; then
-		CONFIG=${CONFIG/%locale.gen/locales.build}
-		if [[ -e ${CONFIG} ]] ; then
-			locales_to_generate=$(sed \
-				-e 's:#.*::' \
-				-e '/^[[:space:]]*$/d' \
-				-e 's:/: :g' \
-				"${CONFIG}")
-		fi
-		if [[ -n ${locales_to_generate} ]] && \
-		   [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]]
-		then
-			ewarn "Automatically importing locales from /etc/locales.build ..."
-			ewarn "You really should do this yourself ...\n"
-		fi
-	fi
-
-	if [[ -z ${locales_to_generate} ]] ; then
-		[[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
-			ewarn "No locales found"
-		exit 0
-	fi
+	[[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
+		ewarn "No locales found"
+	exit 0
 fi
 
 mkdir -p "${LOCALEDIR}"
