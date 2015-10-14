@@ -52,7 +52,7 @@ show_usage() {
 }
 show_version() {
 	local b="(" a=")"
-	local cvsver="$Revision: 1.40 $b $Date: 2015/10/14 13:48:21 $a"
+	local cvsver="$Revision: 1.41 $b $Date: 2015/10/14 13:55:56 $a"
 	echo "locale-gen-${cvsver//: }"
 	exit 0
 }
@@ -339,7 +339,7 @@ while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
 done
 
 for (( i = JOB_IDX_S; i < JOB_IDX_E; ++i )) ; do
-	wait ${JOB_PIDS[$(( i++ ))]}
+	wait ${JOB_PIDS[i]}
 	JOB_RETS+=( $? )
 done
 ret=$(( 0 ${JOB_RETS[@]/#/+} ))
