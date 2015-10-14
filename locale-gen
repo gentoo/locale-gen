@@ -52,7 +52,7 @@ show_usage() {
 }
 show_version() {
 	local b="(" a=")"
-	local cvsver="$Revision: 1.39 $b $Date: 2015/08/29 23:05:43 $a"
+	local cvsver="$Revision: 1.40 $b $Date: 2015/10/14 13:48:21 $a"
 	echo "locale-gen-${cvsver//: }"
 	exit 0
 }
@@ -68,7 +68,7 @@ ASK=""
 ALL=""
 UPDATE=""
 GENERATE=""
-JOBS_MAX=1
+JOBS_MAX=""
 QUIET=0
 SET_X=""
 LOCALE_ARCHIVE=true
@@ -93,6 +93,10 @@ while [[ $# -gt 0 ]] ; do
 	esac
 	shift
 done
+if [[ -z ${JOBS_MAX} ]] ; then
+	JOBS_MAX=$(getconf _NPROCESSORS_ONLN 2>/dev/null)
+	: ${JOBS_MAX:=1}
+fi
 [[ ${JOBS_MAX} -lt 1 ]] && JOBS_MAX=1
 [[ -n ${SET_X} ]] && set -x
 : ${KEEP:=${JUST_LIST}}
