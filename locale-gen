@@ -52,7 +52,7 @@ show_usage() {
 }
 show_version() {
 	local b="(" a=")"
-	local cvsver="$Revision: 1.41 $b $Date: 2015/10/14 13:55:56 $a"
+	local cvsver="$Revision: 1.42 $b $Date: 2017/08/12 16:30:06 $a"
 	echo "locale-gen-${cvsver//: }"
 	exit 0
 }
@@ -148,15 +148,6 @@ for option in ${options} ; do
 	esac
 done
 unset IFS
-
-if ${LOCALE_ARCHIVE} ; then
-	if [[ ${JOBS_MAX} != 1 ]] ; then
-		ewarn "Generating locale-archive: forcing # of jobs to 1"
-		JOBS_MAX=1
-	fi
-else
-	LOCALEDEF_OPTS="--no-archive ${LOCALEDEF_OPTS}"
-fi
 
 [[ -n ${ALL} ]] && CONFIG=${SUPPORTED}
 
@@ -256,6 +247,7 @@ generate_locale() {
 		x=$(
 			[[ -n ${output} ]] && ebegin "${output}"
 			"${DESTDIR}"usr/bin/localedef ${LOCALEDEF_OPTS} \
+				--no-archive \
 				-i "${input}" \
 				-f "${charmap}" \
 				-A "${ALIAS}" \
@@ -346,6 +338,33 @@ ret=$(( 0 ${JOB_RETS[@]/#/+} ))
 
 [[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
 einfo "Generation complete"
+
+if ${LOCALE_ARCHIVE} ; then
+	ebegin "Adding locales to archive"
+	# The pattern ends with / on purpose: we don't care about files (like
+	# locale-archive) in the locale subdir, and we definitely don't want to
+	# delete them!
+	for LOC in "${LOCALEDIR}"/*/; do 
+		LOC=${LOC%/} # Strip trailing /, since localedef doesn't like it
+		x=$(
+			"${DESTDIR}"usr/bin/localedef \
+				--add-to-archive "${LOC}" \
+				--replace \
+				--prefix "${DESTDIR%${EPREFIX}/}/"
+			ret=$?
+			if [[ -n ${output} ]] ; then
+				echo "${x}"
+			elif [[ ${ret} -ne 0 ]] ; then
+				eerror "${disp}: ${x}"
+			fi
+			if [[ $ret -eq 0 ]]; then
+				rm -r "${LOC}"
+			fi
+			exit ${ret}
+		)
+	done
+	eend $ret
+fi
 
 # Remove locales that existed but were not requested
 if [[ -n ${UPDATE} ]] ; then
