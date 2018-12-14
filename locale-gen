@@ -61,7 +61,7 @@ show_version() {
 
 
 
-LOCALEDEF_OPTS="-c"
+LOCALEDEF_OPTS=""
 KEEP=""
 DESTDIR=""
 CONFIG=""
