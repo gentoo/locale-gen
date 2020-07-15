@@ -123,7 +123,7 @@ fi
 
 : ${EROOT:="${EPREFIX}/"}
 if [[ ${EROOT} != "/" ]] ; then
-	einfo "Using locale.gen from ROOT ${EROOT}etc/"
+	einfo "Using locale.gen from ${EROOT}etc/"
 fi
 
 if [[ -n ${DESTDIR} ]] ; then
