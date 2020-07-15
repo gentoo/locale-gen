@@ -115,24 +115,21 @@ fi
 
 : ${ROOT:=/}
 ROOT="${ROOT%/}/"
-if [[ -n ${DESTDIR} ]] && [[ ${ROOT} != "/" ]] ; then
-	eerror "DESTDIR and ROOT are mutually exclusive options"
-	exit 1
+
+if [[ ${ROOT} != "/" ]] ; then
+	eerror "Sorry, but ROOT is not supported."
+	exit 0
 fi
-: ${EROOT:="${ROOT%/}${EPREFIX}/"}
+
+: ${EROOT:="${EPREFIX}/"}
 if [[ ${EROOT} != "/" ]] ; then
 	einfo "Using locale.gen from ROOT ${EROOT}etc/"
 fi
+
 if [[ -n ${DESTDIR} ]] ; then
 	einfo "Building locales in DESTDIR '${DESTDIR}'"
 else
 	DESTDIR=${EROOT}
-fi
-
-# XXX: should fix this ...
-if [[ ${ROOT} != "/" ]] ; then
-	eerror "Sorry, but ROOT support is incomplete at this time."
-	exit 0
 fi
 
 : ${CONFIG:=${EROOT}etc/locale.gen}
