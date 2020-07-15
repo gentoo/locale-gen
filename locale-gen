@@ -52,14 +52,11 @@ show_usage() {
 	eerror "Unknown option '$1'"
 	exit 1
 }
+
 show_version() {
-	local b="(" a=")"
-	local cvsver="$Revision: 1.42 $b $Date: 2017/08/12 16:30:06 $a"
-	echo "locale-gen-${cvsver//: }"
+	echo "locale-gen-2.xxx"
 	exit 0
 }
-
-
 
 LOCALEDEF_OPTS=""
 KEEP=""
