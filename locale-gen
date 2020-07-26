@@ -189,26 +189,11 @@ if [[ -z ${locales_to_generate} ]] && [[ -e ${CONFIG} ]] ; then
 		ewarn "Some might be filtered, but you must fix it."
 		locales_to_generate=$(echo "${locales_to_generate}" | uniq)
 	fi
-
-	if echo ${locales_to_generate} | grep -vq 'C.UTF-8' ; then
-		if [[ -z  ${locales_to_generate} ]] ; then
-			locales_to_generate='C.UTF-8 UTF-8'
-		else
-			locales_to_generate=$(echo "${locales_to_generate}" ; echo -n 'C.UTF-8 UTF-8')
-		fi
-		CUTF_ADDED="true"
-	fi
 fi
 
 if [[ -z ${locales_to_generate} ]] ; then
 	[[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
-		ewarn "No locales found, keeping locale archive"
-	exit 0
-fi
-
-if [[ ${locales_to_generate} == "C.UTF-8 UTF-8" ]] && [[ -n ${CUTF_ADDED} ]] ; then
-	[[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
-		ewarn "No locales found, keeping locale archive"
+		ewarn "No locales to generate found, keeping locale archive"
 	exit 0
 fi
 
@@ -240,6 +225,13 @@ normalize() {
 locales_disp=$(echo "${locales_to_generate}" | sed \
 	-e '   /@/   s:[[:space:]]*\([^@[:space:]]*\)\([^[:space:]]*\)[[:space:]]\+\([^[:space:]]*\):\1.\3\2:' \
 	-e '/^[^@]*$/s:[[:space:]]*\([^.[:space:]]*\)\([^[:space:]]*\)[[:space:]]\+\([^[:space:]]*\):\1.\3:')
+
+# Now check the normalized version for C.UTF-8, and add it if not present
+if echo ${locales_disp} | grep -vq 'C.UTF-8' ; then
+	locales_to_generate=$(echo "${locales_to_generate}" ; echo -n 'C.UTF-8 UTF-8')
+	locales_disp=$(echo "${locales_disp}" ; echo -n 'C.UTF-8')
+	CUTF_ADDED="true"
+fi
 
 eval declare -a locales_disp=(${locales_disp})
 eval declare -a locales_to_generate=(${locales_to_generate})
