@@ -376,12 +376,13 @@ ret=$(( 0 ${JOB_RETS[@]/#/+} ))
 einfo "Generation complete"
 
 if ${LOCALE_ARCHIVE} && [[ -z ${JUST_LIST} ]] ; then
-	if true ; then  # need to check that at least one locale has to be added
+	# need to check that at least one locale has to be added
+	if [[ $(echo "${LOCALEDIR}"/*/) != "${LOCALEDIR}"'/*/' ]] ; then
 		ebegin "Adding locales to archive"
 		# The pattern ends with / on purpose: we don't care about files (like
 		# locale-archive) in the locale subdir, and we definitely don't want to
 		# delete them!
-		for LOC in "${LOCALEDIR}"/*/; do 
+		for LOC in "${LOCALEDIR}"/*/; do
 			LOC=${LOC%/} # Strip trailing /, since localedef doesn't like it
 			x=$(
 				# In most cases, localedef can just use the system glibc.
@@ -415,6 +416,8 @@ if ${LOCALE_ARCHIVE} && [[ -z ${JUST_LIST} ]] ; then
 			)
 		done
 		eend $ret
+	else
+		einfo "No locales are to be added to the archive."
 	fi
 fi
 
