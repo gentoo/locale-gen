@@ -416,7 +416,7 @@ if ${LOCALE_ARCHIVE} && [[ -z ${JUST_LIST} ]] ; then
 			)
 		done
 		eend $ret
-	else
+	elif [[ ${QUIET} -eq 0 ]] ; then
 		einfo "No locales are to be added to the archive."
 	fi
 fi
