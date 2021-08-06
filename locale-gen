@@ -127,6 +127,7 @@ if [[ ${EROOT} != "/" ]] ; then
 fi
 
 if [[ -n ${DESTDIR} ]] ; then
+	DESTDIR="${DESTDIR%/}/"
 	einfo "Building locales in DESTDIR '${DESTDIR}'"
 else
 	DESTDIR=${EROOT}
