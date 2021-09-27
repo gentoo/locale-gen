@@ -71,7 +71,6 @@ JOBS_MAX=""
 QUIET=0
 SET_X=""
 LOCALE_ARCHIVE=true
-CUTF_ADDED=""
 INPLACE_GLIBC=""
 while [[ $# -gt 0 ]] ; do
 	case $1 in
