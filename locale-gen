@@ -192,9 +192,9 @@ if [[ -z ${locales_to_generate} ]] && [[ -e ${CONFIG} ]] ; then
 	fi
 fi
 
-# Transform the name in locales.gen to the name used when storing
-# the locale data in /usr/lib/locale/ ... this normalize algo is
-# taken out of the glibc localedef source code ...
+# Transform the name in locales.gen to the name used when storing the locale data in
+# /usr/lib/locale/.  This normalize algo is taken out of the glibc localedef source:
+# https://sourceware.org/git/?p=glibc.git;a=blob;f=locale/programs/localedef.c;hb=glibc-2.34#l562
 normalize() {
 	if [[ $1 == *.* ]] ; then
 		local ret=$(echo ${1##*.} | tr '[[:upper:]]' '[[:lower:]]')
@@ -316,6 +316,10 @@ JOB_IDX_S=0
 JOB_IDX_E=0
 cnt=0
 lidx=0
+# Keep track of (normalized) locales generated in case the request has different inputs that
+# normalize down to the same value.  We trim $existing_locales as we go for later use which
+# prevents its direct use.
+generated_locales=" "
 while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
 	: $(( ++cnt ))
 	locale=${locales_to_generate[$((lidx++))]}
@@ -334,16 +338,21 @@ while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
 
 	disp=${locales_disp[$(( cnt - 1 ))]}
 
-	if [[ -n ${UPDATE} ]] ; then
-		normalized_locale=$(normalize ${locale})
-		if [[ ${existing_locales} == *" ${normalized_locale} "* ]] ; then
-			existing_locales=${existing_locales/ ${normalized_locale} / }
-			if [[ ${QUIET} -eq 0 ]] ; then
-				cnt_fmt=$(printf "%${#total}i" ${cnt})
-				einfo " (${cnt_fmt}/${total}) Skipping ${disp}"
-			fi
-			continue
+	normalized_locale=$(normalize ${locale})
+	if [[ ${generated_locales} == *" ${normalized_locale} "* ]] ; then
+		already_generated="true"
+	else
+		already_generated="false"
+	fi
+	generated_locales+="${normalized_locale} "
+	if ${already_generated} || \
+	   [[ -n ${UPDATE} && ${existing_locales} == *" ${normalized_locale} "* ]] ; then
+		existing_locales=${existing_locales/ ${normalized_locale} / }
+		if [[ ${QUIET} -eq 0 ]] ; then
+			cnt_fmt=$(printf "%${#total}i" ${cnt})
+			einfo " (${cnt_fmt}/${total}) Skipping ${disp}"
 		fi
+		continue
 	fi
 
 	# If the locale is like 'en_US.UTF8', then we really want 'en_US'
