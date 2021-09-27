@@ -1,8 +1,10 @@
 #!/bin/bash
 
 #
-# Based upon Debian's locale-gen, fetched from glibc_2.3.6-7.diff.gz
+# Based upon Debian's locale-gen, fetched from glibc_2.3.6-7.diff.gz, but completely rewritten.
 #
+
+# NB: Bash-4.0+ required.  We use += and ${var,,} features.
 
 unset POSIXLY_CORRECT IFS
 umask 0022
