@@ -105,14 +105,14 @@ fi
 
 if [[ -z ${JOBS_MAX} ]] ; then
 	JOBS_MAX=$(getconf _NPROCESSORS_ONLN 2>/dev/null)
-	: ${JOBS_MAX:=1}
+	: "${JOBS_MAX:=1}"
 fi
 [[ ${JOBS_MAX} -lt 1 ]] && JOBS_MAX=1
 [[ -n ${SET_X} ]] && set -x
-: ${KEEP:=${JUST_LIST}}
+: "${KEEP:=${JUST_LIST}}"
 [[ -n ${GENERATE} ]] && UPDATE="true" && KEEP="true"
 
-: ${ROOT:=/}
+: "${ROOT:=/}"
 ROOT="${ROOT%/}/"
 
 if [[ ${ROOT} != "/" ]] ; then
@@ -120,7 +120,7 @@ if [[ ${ROOT} != "/" ]] ; then
 	exit 0
 fi
 
-: ${EROOT:="${EPREFIX}/"}
+: "${EROOT:=${EPREFIX}/}"
 if [[ ${EROOT} != "/" ]] ; then
 	einfo "Using locale.gen from ${EROOT}etc/"
 fi
@@ -132,7 +132,7 @@ else
 	DESTDIR=${EROOT}
 fi
 
-: ${CONFIG:=${EROOT}etc/locale.gen}
+: "${CONFIG:=${EROOT}etc/locale.gen}"
 LOCALES=${DESTDIR}usr/share/i18n/locales
 CHARMAPS=${DESTDIR}usr/share/i18n/charmaps
 SUPPORTED=${DESTDIR}usr/share/i18n/SUPPORTED
