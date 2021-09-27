@@ -379,7 +379,7 @@ einfo "Generation complete"
 if ${LOCALE_ARCHIVE} && [[ -z ${JUST_LIST} ]] ; then
 	# need to check that at least one locale has to be added
 	if [[ $(echo "${LOCALEDIR}"/*/) != "${LOCALEDIR}"'/*/' ]] ; then
-		ebegin "Adding locales to archive"
+		[[ ${QUIET} -eq 0 ]] && ebegin "Adding locales to archive"
 		# The pattern ends with / on purpose: we don't care about files (like
 		# locale-archive) in the locale subdir, and we definitely don't want to
 		# delete them!
@@ -416,7 +416,7 @@ if ${LOCALE_ARCHIVE} && [[ -z ${JUST_LIST} ]] ; then
 				exit ${ret}
 			)
 		done
-		eend $ret
+		[[ ${QUIET} -eq 0 ]] && eend ${ret}
 	elif [[ ${QUIET} -eq 0 ]] ; then
 		einfo "No locales are to be added to the archive."
 	fi
