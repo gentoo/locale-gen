@@ -196,10 +196,11 @@ fi
 # https://sourceware.org/git/?p=glibc.git;a=blob;f=locale/programs/localedef.c;hb=glibc-2.34#l562
 normalize() {
 	if [[ $1 == *.* ]] ; then
-		local ret=$(echo ${1##*.} | tr '[[:upper:]]' '[[:lower:]]')
-		echo ${1%%.*}.${ret//-}
+		local ret=${1##*.}
+		ret=${ret,,}
+		echo "${1%%.*}.${ret//-}"
 	else
-		echo $1
+		echo "$1"
 	fi
 }
 
