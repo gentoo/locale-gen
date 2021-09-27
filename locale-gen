@@ -299,14 +299,14 @@ generate_locale() {
 		elif [[ ${ret} -ne 0 ]] ; then
 			eerror "${disp}: ${x}"
 		fi
+
+		if [[ ${ret} -ne 0 && ${locale} == */* ]] ; then
+			ewarn "Perhaps you meant to use a space instead of a / in your config file ?"
+		fi
 		exit ${ret}
 	) &
 	JOB_PIDS+=( $! )
 	: $(( ++JOB_IDX_E ))
-
-	if [[ ${ret} != 0 && ${locale} == */* ]] ; then
-		ewarn "Perhaps you meant to use a space instead of a / in your config file ?"
-	fi
 }
 
 JOB_PIDS=()
