@@ -124,17 +124,17 @@ fi
 
 : "${EROOT:=${EPREFIX}/}"
 if [[ ${EROOT} != "/" ]] ; then
-	einfo "Using locale.gen from ${EROOT}etc/"
+	einfo "Using locale.gen from ${EROOT%/}/etc/"
 fi
 
 if [[ -n ${DESTDIR} ]] ; then
 	DESTDIR="${DESTDIR%/}/"
 	einfo "Building locales in DESTDIR '${DESTDIR}'"
 else
-	DESTDIR=${EROOT}
+	DESTDIR="${EROOT%/}/"
 fi
 
-: "${CONFIG:=${EROOT}etc/locale.gen}"
+: "${CONFIG:=${EROOT%/}/etc/locale.gen}"
 LOCALES=${DESTDIR}usr/share/i18n/locales
 CHARMAPS=${DESTDIR}usr/share/i18n/charmaps
 SUPPORTED=${DESTDIR}usr/share/i18n/SUPPORTED
