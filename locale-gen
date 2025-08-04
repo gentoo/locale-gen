@@ -1,581 +1,451 @@
-#!/usr/bin/perl
+#!/bin/bash
 
-# locale-gen
 #
-# Generates a glibc locale archive from templates, potentially limiting itself
-# to a set of locales defined by the admin, typically within /etc/locale.gen.
+# Based upon Debian's locale-gen, fetched from glibc_2.3.6-7.diff.gz, but completely rewritten.
+#
 
-use v5.36;
+# NB: Bash-4.0+ required.  We use += and ${var,,} features.
 
-use Errno qw(ENOENT);
-use Fcntl qw(SEEK_SET);
-use File::Spec::Functions qw(canonpath catfile catdir splitpath);
-use File::Temp qw(tempdir);
-use Getopt::Long ();
-use JSON::PP ();
-use POSIX qw(LC_ALL setlocale);
+unset POSIXLY_CORRECT IFS
+umask 0022
 
-# Formally stable as of v5.40; sufficiently functional in both v5.36 and v5.38.
-use experimental qw(try);
+argv0=${0##*/}
 
-# Determine the basename of the presently compiling script.
-my $PROGRAM;
-BEGIN { $PROGRAM = (splitpath(__FILE__))[-1]; }
+EPREFIX="@GENTOO_PORTAGE_EPREFIX@"
+if [[ ${EPREFIX} == "@"GENTOO_PORTAGE_EPREFIX"@" ]] ; then
+	EPREFIX=""
+fi
 
-my $VERSION = '3.0';
-
-my $DEFERRED_SIGNAL = '';
-my $PID = $$;
-my $TEMPDIR;
-
-# For the C locale to be in effect can be a consequence of the user's chosen
-# locale not yet being available. That being the case, unset all environment
-# variables pertaining to locale handling for the benefit of any subprocesses.
-if (setlocale(LC_ALL) eq 'C') {
-	delete @ENV{ grep +( m/^(LANG\z|LC_)/ ), keys %ENV };
+FUNCTIONS_SH="/lib/gentoo/functions.sh"
+source "${EPREFIX}"${FUNCTIONS_SH} || {
+	echo "${argv0}: Could not source ${FUNCTIONS_SH}!" 1>&2
+	exit 1
 }
 
-# Unset BASH_ENV for security reasons. Even as sh(1), bash acts upon it. Unset
-# CDPATH also, for it is nothing but a liability in a non-interactive context.
-delete @ENV{'BASH_ENV', 'CDPATH'};
+COMPILED_LOCALES=""
 
-{
-	# Determine the locale directory, as reported by localedef(1).
-	my $locale_dir = get_locale_dir();
+show_usage() {
+	cat <<-EOF
+	Usage: ${HILITE}${argv0}${NORMAL} ${GOOD}[options]${NORMAL} -- ${GOOD}[localedef options]${NORMAL}
 
-	# Infer the path of a Gentoo Prefix environment, if any.
-	my $gentoo_prefix = detect_gentoo_prefix($locale_dir);
-	if (length $gentoo_prefix) {
-		$locale_dir =~ s/^\Q$gentoo_prefix//;
-	}
+	Generate locales based upon the config file /etc/locale.gen.
 
-	# Collect any supported options and option-arguments.
-	my %opt = parse_opts($gentoo_prefix, @ARGV);
-	my $prefix = $opt{'prefix'} // $gentoo_prefix;
+	${HILITE}Options:${NORMAL}
+	    ${GOOD}-k, --keep${NORMAL}               Don't nuke existing locales
+	    ${GOOD}-d, --destdir <dir>${NORMAL}      Use locale data in specified DESTDIR tree
+	    ${GOOD}-c, --config <config>${NORMAL}    Use specified config instead of default locale.gen
+	    ${GOOD}-l, --list${NORMAL}               List all the locales to be generated
+	    ${GOOD}-a, --ask${NORMAL}                Ask before generating each locale
+	    ${GOOD}-A, --all${NORMAL}                Pretend the locale list contains all locales
+	    ${GOOD}-u, --update${NORMAL}             Only generate locales that are missing
+	    ${GOOD}-G, --generate <locale>${NORMAL}  Generate specified locale (one shot; implies -k -u)
+	    ${GOOD}-j, --jobs <num>${NORMAL}         Number of locales to generate at a time (parallel)
+	    ${GOOD}-q, --quiet${NORMAL}              Only show errors
+	    ${GOOD}-V, --version${NORMAL}            Meaningless version information
+	    ${GOOD}-h, --help${NORMAL}               Show this help cruft
 
-	# A proxy check is justified because compilation may take a long time.
-	my $archive_dir = catdir($prefix, $locale_dir);
-	if (! utime undef, undef, $archive_dir) {
-		die "$PROGRAM: Aborting because UID $> can't modify '$archive_dir': $!\n";
-	}
+	${HILITE}Localedef Options:${NORMAL}
+	    By default, ${GOOD}${LOCALEDEF_OPTS}${NORMAL} is passed to localedef.
 
-	# Honour the --quiet option.
-	if ($opt{'quiet'} && ! open *STDOUT, '>/dev/null') {
-		die "Can't direct STDOUT to /dev/null: $!";
-	}
-
-	# Ensure that the C.UTF-8 locale is made available.
-	my @locales = ([ 'C', 'UTF-8', 'C.UTF-8' ]);
-
-	# Compose a list of up to two configuration files to be read.
-	my @config_files;
-	if (exists $opt{'config'}) {
-		push @config_files, $opt{'config'};
-	} else {
-		push @config_files, (
-			catfile($prefix, '/etc', 'locale.gen'),
-			catfile($prefix, '/usr/share/i18n', 'SUPPORTED')
-		);
-	}
-
-	# Collect the locales that are being requested for installation.
-	push @locales, read_config($prefix, @config_files);
-
-	# Compose a dictionary of installed locales for the --update option.
-	my %installed_by;
-	if ($opt{'update'}) {
-		# If localedef(1) originates from a Gentoo Prefix environment,
-		# the prefix will already have been hard-coded by the utility.
-		my $explicit_prefix = length $gentoo_prefix ? undef : $prefix;
-		%installed_by = map +( $_ => 1 ), list_locales($explicit_prefix);
-	}
-
-	# Filter out locales that are duplicates or that are already installed.
-	my %requested_by;
-	my $i = 0;
-	while ($i <= $#locales) {
-		my $canonical = $locales[$i][2];
-		my $normal = normalize($canonical);
-		if ($requested_by{$normal}++ || $installed_by{$normal}) {
-			splice @locales, $i, 1;
-		} else {
-			++$i;
-		}
-	}
-
-	# If a non-actionable update was requested, proceed no further.
-	if (! @locales) {
-		print "All of the requested locales are presently installed.\n";
-		exit 0;
-	}
-
-	# Create a temporary directory and switch to it.
-	enter_tempdir($prefix);
-
-	# Compile the selected locales.
-	generate_locales($prefix, $opt{'jobs'}, @locales);
-
-	# Integrate the newly compiled locales into the system's locale archive.
-	generate_archive($prefix, $locale_dir, $opt{'update'}, map +( $_->[2] ), @locales);
-
-	my $total = scalar @locales;
-	printf "Successfully installed %d locale%s.\n", $total, plural($total);
-}
-
-sub get_locale_dir () {
-	my $stdout = qx{ localedef --help };
-	if ($? == 0 && $stdout =~ m/\hlocale path\h*:\s+(\/[^:]+)/) {
-		return canonpath($1);
-	} else {
-		die "Can't parse locale directory from localedef(1) output: $!";
-	}
-}
-
-sub detect_gentoo_prefix ($path) {
-	if ($path !~ s/\/usr\/lib\/locale\z//) {
-		die "Can't handle unexpected locale directory of '$path'";
-	} elsif (length $path && -e "$path/etc/gentoo-release") {
-		return $path;
-	} else {
-		return '';
-	}
-}
-
-sub parse_opts ($known_prefix, @args) {
-	my @options = (
-		[ 'config|c=s' => "The file containing the chosen locales (default: $known_prefix/etc/locale.gen)" ],
-		[ 'all|A'      => 'Select all locales, ignoring the config file' ],
-		[ 'update|u'   => 'Skip any chosen locales that are already installed', ],
-		[ 'jobs|j=i'   => 'Maximum number of localedef(1) instances to run in parallel' ],
-		[ 'prefix|p=s' => 'The prefix of the root filesystem' ],
-		[ 'quiet|q'    => 'Only show errors' ],
-		[ 'version|V'  => 'Output version information and exit' ],
-		[ 'help|h'     => 'Display this help and exit' ]
-	);
-
-	# Parse the provided arguments.
-	my $parser = Getopt::Long::Parser->new;
-	$parser->configure(qw(posix_default bundling_values no_ignore_case));
-	my %opt;
-	{
-		# Decorate option validation errors while also not permitting
-		# for more than one to be reported.
-		local $SIG{'__WARN__'} = sub ($error) { die "$PROGRAM: $error" };
-		$parser->getoptionsfromarray(\@args, \%opt, map +( $_->[0] ), @options);
-	}
-
-	# If either --help or --version was specified, exclusively attend to it.
-	if ($opt{'help'}) {
-		show_usage(@options);
-		exit;
-	} elsif ($opt{'version'}) {
-		show_version();
-		exit;
-	}
-
-	# Validate the options and option-arguments.
-	if ($opt{'all'} && exists $opt{'config'}) {
-		die "$PROGRAM: The --all and --config options are mutually exclusive\n";
-	} elsif (exists $opt{'prefix'} && length $known_prefix && ! is_eq_file($known_prefix, $opt{'prefix'})) {
-		die "$PROGRAM: The --prefix option specifies a path contrary to a detected Gentoo Prefix\n";
-	}
-
-	# Assign values for unspecified options that need them.
-	if (! exists $opt{'jobs'} || $opt{'jobs'} < 1) {
-		$opt{'jobs'} = get_nprocs() || 1;
-	}
-	if ($opt{'all'}) {
-		$opt{'config'} = catfile($opt{'prefix'} // $known_prefix, '/usr/share/i18n', 'SUPPORTED');
-	} elsif (exists $opt{'config'} && $opt{'config'} eq '-') {
-		$opt{'config'} = '/dev/stdin';
-	}
-
-	return %opt;
-}
-
-sub show_usage (@options) {
-	print "Usage: locale-gen [OPTION]...\n\n";
-	my $pipe;
-	if (! open $pipe, "| column -t -s \037") {
-		exit 1;
-	}
-	for my $row (@options) {
-		my ($spec, $description) = $row->@*;
-		my ($long, $short) = split /[|=]/, $spec;
-		printf {$pipe} "-%s, --%s\037%s\n", $short, $long, $description;
-	}
-}
-
-sub show_version () {
-	print <<~EOF;
-	locale-gen $VERSION
-	Copyright 2024 Kerin Millar <kfm\@plushkava.net>
-	License GPL-2.0-only <https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html>
+	For more info, see the ${HILITE}locale-gen${NORMAL}(1) and ${HILITE}locale.gen${NORMAL}(8) manpages.
 	EOF
+	[[ $# -eq 0 ]] && exit 0
+	echo ""
+	eerror "Unknown option '$1'"
+	exit 1
 }
 
-sub list_locales ($prefix) {
-	if (! defined(my $pid = open my $pipe, '-|')) {
-		die "Can't fork: $!";
-	} elsif ($pid == 0) {
-		run_localedef($prefix, '--list-archive');
-	} else {
-		chomp(my @locales = readline $pipe);
-		if (-1 == waitpid($pid, 0) || $? != 0) {
-			die "$PROGRAM: Can't obtain a list of the presently installed locales\n";
-		}
-		return @locales;
-	}
+show_version() {
+	echo "locale-gen-2.xxx"
+	exit 0
 }
 
-sub normalize ($canonical) {
-	if (2 == (my ($locale, $charmap) = split /\./, $canonical, 3)) {
-		# en_US.UTF-8 => en_US.utf8; en_US.ISO-8859-1 => en_US.iso88591
-		return join '.', $locale, lc($charmap =~ s/-//gr);
-	} else {
-		die "Can't normalize " . render_printable($canonical);
-	}
+LOCALEDEF_OPTS=""
+KEEP=""
+DESTDIR=""
+CONFIG=""
+JUST_LIST=""
+ASK=""
+ALL=""
+UPDATE=""
+GENERATE=""
+JOBS_MAX=""
+QUIET=0
+SET_X=""
+LOCALE_ARCHIVE=true
+INPLACE_GLIBC=""
+while [[ $# -gt 0 ]] ; do
+	case $1 in
+		--inplace-glibc)           INPLACE_GLIBC=$1;;
+		-k|--keep|--keep-existing) KEEP=$1;;
+		-d|--destdir)              shift; DESTDIR=$1; unset ROOT;;
+		-c|--config)               shift; CONFIG=$1;;
+		-l|--list)                 JUST_LIST=$1;;
+		-a|--ask)                  ASK=$1;;
+		-A|--all)                  ALL=$1;;
+		-u|--update)               UPDATE=$1;;
+		-G|--generate)             shift; GENERATE=$1;;
+		-j|--jobs)                 shift; JOBS_MAX=$(( $1 ));;
+		-j*)                       : $(( JOBS_MAX = ${1#-j} ));;
+		-q|--quiet)                : $(( ++QUIET ));;
+		-x|--debug)                SET_X="true";;
+		-V|--version)              show_version;;
+		-h|--help)                 show_usage;;
+		--)                        shift; LOCALEDEF_OPTS=$*; break;;
+		*)                         show_usage $1;;
+	esac
+	shift
+done
+
+if [[ -n ${COMPILED_LOCALES} ]] ; then
+	ewarn "All locales have been installed and registered by the package manager. If you"
+	ewarn "rebuild the locale archive now, file integrity tools may show it as corrupted."
+	ewarn "This is not really a big problem, but a better solution is to disable"
+	ewarn "USE=compile-locales and re-install glibc if you dont need all locales."
+	echo
+fi
+
+if [[ -z ${JOBS_MAX} ]] ; then
+	JOBS_MAX=$(getconf _NPROCESSORS_ONLN 2>/dev/null)
+	: "${JOBS_MAX:=1}"
+fi
+[[ ${JOBS_MAX} -lt 1 ]] && JOBS_MAX=1
+[[ -n ${SET_X} ]] && set -x
+: "${KEEP:=${JUST_LIST}}"
+[[ -n ${GENERATE} ]] && UPDATE="true" && KEEP="true"
+
+: "${ROOT:=/}"
+ROOT="${ROOT%/}/"
+
+if [[ ${ROOT} != "/" ]] ; then
+	eerror "Sorry, but ROOT is not supported."
+	exit 0
+fi
+
+: "${EROOT:=${EPREFIX}/}"
+if [[ ${EROOT} != "/" ]] ; then
+	einfo "Using locale.gen from ${EROOT%/}/etc/"
+fi
+
+if [[ -n ${DESTDIR} ]] ; then
+	DESTDIR="${DESTDIR%/}/"
+	einfo "Building locales in DESTDIR '${DESTDIR}'"
+else
+	DESTDIR="${EROOT%/}/"
+fi
+
+: "${CONFIG:=${EROOT%/}/etc/locale.gen}"
+LOCALES=${DESTDIR}usr/share/i18n/locales
+CHARMAPS=${DESTDIR}usr/share/i18n/charmaps
+SUPPORTED=${DESTDIR}usr/share/i18n/SUPPORTED
+ALIAS=${DESTDIR}usr/share/locale/locale.alias
+
+#
+# Grab any user options in their config file
+options=$(sed -n \
+	-e '/^[[:space:]]*#%/s:^[[:space:]]*#%[[:space:]]*::p'\
+	"${CONFIG}" 2>/dev/null
+)
+IFS=$'\n'
+for option in ${options} ; do
+	case ${option} in
+		no-locale-archive)
+			LOCALE_ARCHIVE=false
+			;;
+		*)
+			ewarn "Unrecognized option '${option}'"
+			;;
+	esac
+done
+unset IFS
+
+[[ -n ${ALL} ]] && CONFIG=${SUPPORTED}
+
+# Extract the location of the locale dir on the fly as `localedef --help` has:
+#                        locale path    : /usr/lib64/locale:/usr/share/i18n
+# For long paths, the line may get wrapped into two, in which case space (' ') is replaced
+# by newline (\n).
+LOCALEDIR=$(LC_ALL="C" "${DESTDIR}"usr/bin/localedef --help | sed -n -r '/locale path/{N;s|.*:[ \n](.*):/.*|\1|;p}')
+LOCALEDIR="${DESTDIR}${LOCALEDIR#${EPREFIX}}"
+if [[ $? -ne 0 ]] || [[ -z ${LOCALEDIR} ]] || [[ ${LOCALEDIR} != ${DESTDIR}/usr/lib*/locale ]] ; then
+	eerror "Unable to parse the output of your localedef utility." 1>&2
+	eerror "File a bug about this issue and include the output of 'localedef --help'." 1>&2
+	exit 1
+fi
+
+# Only generate locales the user specified before falling back to the config.
+locales_to_generate=${GENERATE}
+
+if [[ -z ${locales_to_generate} ]] && [[ -e ${CONFIG} ]] ; then
+	locales_to_generate=$(sed \
+		-e 's:#.*::' \
+		-e '/^[[:space:]]*$/d' \
+		"${CONFIG}" | sort)
+	# Sanity check to make sure people did not duplicate entries. #550884
+	# The first column must be unique specifically. #235555
+	dup_locales_to_generate=$(
+		echo "${locales_to_generate}" | \
+			awk '{ if ($1 == last) { print lastline; print; } else { lastline = $0; last = $1; } }')
+	if [[ -n ${dup_locales_to_generate} ]] ; then
+		ewarn "These locales have been duplicated in your config:\n${dup_locales_to_generate}"
+		ewarn "Some might be filtered, but you must fix it."
+		locales_to_generate=$(echo "${locales_to_generate}" | uniq)
+	fi
+fi
+
+# Transform the name in locales.gen to the name used when storing the locale data in
+# /usr/lib/locale/.  This normalize algo is taken out of the glibc localedef source:
+# https://sourceware.org/git/?p=glibc.git;a=blob;f=locale/programs/localedef.c;hb=glibc-2.34#l562
+normalize() {
+	if [[ $1 == *.* ]] ; then
+		local ret=${1##*.}
+		ret=${ret,,}
+		echo "${1%%.*}.${ret//-}"
+	else
+		echo "$1"
+	fi
 }
 
-sub read_config ($prefix, @paths) {
-	# Compose a dictionary of locale names known to be valid.
-	my %locale_by = map +( $_ => 1 ), get_valid_locales($prefix);
+# These funky sed's are based on the stuff in glibc's localedata/Makefile
+# Basically we want to rewrite the display like so:
+# <locale without a . or @>.<charmap>[@extra stuff after the @ in the locale]
+# en_US       ISO-8859-1  -> en_US.ISO-8859-1
+# en_US.UTF-8 UTF-8       -> en_US.UTF-8
+# de_DE@euro  ISO-8859-15 -> de_DE.ISO-8859-15@euro
+locales_disp=$(echo "${locales_to_generate}" | sed \
+	-e '   /@/   s:[[:space:]]*\([^@[:space:]]*\)\([^[:space:]]*\)[[:space:]]\+\([^[:space:]]*\):\1.\3\2:' \
+	-e '/^[^@]*$/s:[[:space:]]*\([^.[:space:]]*\)\([^[:space:]]*\)[[:space:]]\+\([^[:space:]]*\):\1.\3:')
 
-	# Compose a dictionary of character maps known to be valid.
-	my %charmap_by = map +( $_ => 1 ), get_valid_charmaps($prefix);
+# Now check the normalized version for C.UTF-8, and add it if not present
+if [[ -z ${locales_to_generate} ]] ; then
+	if [[ -z ${JUST_LIST} ]] ; then
+		[[ ${QUIET} -eq 0 ]] && \
+			ewarn "No locales to generate found, keeping archive but ensuring C.UTF-8 is present"
+		KEEP=1
+		UPDATE=1
+		locales_disp='C.UTF-8'
+		locales_to_generate='C.UTF-8 UTF-8'
+	fi
+else
+	if echo ${locales_disp} | grep -vqi 'C.UTF-8' ; then
+		locales_to_generate=$(echo "${locales_to_generate}" ; echo -n 'C.UTF-8 UTF-8')
+		locales_disp=$(echo "${locales_disp}" ; echo -n 'C.UTF-8')
+	fi
+fi
 
-	# Iterate over the given paths and return the first non-empty list of
-	# valid locale declarations that can be found among them, if any.
-	for my $i (keys @paths) {
-		my $path = $paths[$i];
-		try {
-			my $fh = fopen($path);
-			$! = 0;
-			if (my @locales = parse_config($fh, $path, \%locale_by, \%charmap_by)) {
-				return @locales;
-			}
-		} catch ($e) {
-			# Disregard open errors concerning non-existent files
-			# unless there are no more paths to be tried. Validation
-			# errors shall also be propagated here.
-			if ($! != ENOENT || $i == $#paths) {
-				die $e;
-			}
-		}
-	}
+mkdir -p "${LOCALEDIR}"
+if [[ -z ${KEEP} && -z ${UPDATE} ]] ; then
+	# Remove all old locale dir and locale-archive before generating new
+	# locale data.  Scrubbing via update is done elsewhere.
+	rm -rf "${LOCALEDIR}"/* &> /dev/null || true
+fi
 
-	# For no locales to have been discovered at this point is exceptional.
-	my $path_list = render_printable(scalar @paths == 1 ? $paths[0] : \@paths);
-	die "$PROGRAM: No locale declarations were found within $path_list\n";
+eval declare -a locales_disp=(${locales_disp})
+eval declare -a locales_to_generate=(${locales_to_generate})
+total=$(( ${#locales_to_generate[*]} / 2 ))
+
+[[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
+einfo "Generating ${total} locales (this might take a while) with ${JOBS_MAX} jobs"
+
+if [[ -n ${UPDATE} ]] ; then
+	# normalize newlines into spaces
+	existing_locales=" $(echo $(locale -a 2>/dev/null)) "
+fi
+
+generate_locale() {
+	local output=""
+
+	if [[ -z ${ASK} ]] && [[ ${QUIET} -eq 0 ]] ; then
+		output=" (${cnt_fmt}/${total}) Generating ${disp}"
+	fi
+
+	if [[ $(( JOB_IDX_E - JOB_IDX_S )) == ${JOBS_MAX} ]] ; then
+		wait ${JOB_PIDS[$(( JOB_IDX_S++ ))]}
+		JOB_RETS+=( $? )
+	fi
+	(
+		# Accumulate all the output in one go so the parallel
+		# jobs don't tromp on each other
+		x=$(
+			[[ -n ${output} ]] && ebegin "${output}"
+			# In most cases, localedef can just use the system glibc.
+			# However, if we are within a major glibc upgrade, this may fail
+			# in src_* phases since the new localedef links against the new
+			# glibc, but the new glibc is not installed yet...
+			if [[ -z ${INPLACE_GLIBC} ]] ; then
+				"${DESTDIR}"usr/bin/localedef ${LOCALEDEF_OPTS} \
+					--no-archive \
+					-i "${input}" \
+					-f "${charmap}" \
+					-A "${ALIAS}" \
+					--prefix "${DESTDIR%${EPREFIX}/}/" \
+					"${locale}" 2>&1
+			else
+				# We assume that the current directory is "${ED}"/$(get_libdir),
+				# see the glibc ebuild, function glibc_sanity_check(), for why.
+				LC_ALL=C ./ld-*.so --library-path . \
+					"${DESTDIR}"usr/bin/localedef ${LOCALEDEF_OPTS} \
+					--no-archive \
+					-i "${input}" \
+					-f "${charmap}" \
+					-A "${ALIAS}" \
+					--prefix "${DESTDIR%${EPREFIX}/}/" \
+					"${locale}" 2>&1
+			fi
+			ret=$?
+			[[ -n ${output} ]] && eend ${ret}
+			exit ${ret}
+		)
+		ret=$?
+		if [[ -n ${output} ]] ; then
+			echo "${x}"
+		elif [[ ${ret} -ne 0 ]] ; then
+			eerror "${disp}: ${x}"
+		fi
+
+		if [[ ${ret} -ne 0 && ${locale} == */* ]] ; then
+			ewarn "Perhaps you meant to use a space instead of a / in your config file ?"
+		fi
+		exit ${ret}
+	) &
+	JOB_PIDS+=( $! )
+	: $(( ++JOB_IDX_E ))
 }
 
-sub get_valid_locales ($prefix) {
-	my $top = local $ENV{'TOP'} = catdir($prefix, '/usr/share/i18n/locales');
-	my @paths = qx{ cd -- "\$TOP" && find . ! -path . -prune ! -path '*\n*' -type f -exec grep -lxF LC_IDENTIFICATION {} + };
-	if ($? != 0 || ! @paths) {
-		die "$PROGRAM: Failed to compose a list of valid locale names from '$top'\n";
-	}
-	chomp @paths;
-	return map +( (splitpath($_))[-1] ), @paths;
-}
+JOB_PIDS=()
+JOB_RETS=()
+JOB_IDX_S=0
+JOB_IDX_E=0
+cnt=0
+lidx=0
+# Keep track of (normalized) locales generated in case the request has different inputs that
+# normalize down to the same value.  We trim $existing_locales as we go for later use which
+# prevents its direct use.
+generated_locales=" "
+while [[ -n ${locales_to_generate[${lidx}]} ]] ; do
+	: $(( ++cnt ))
+	locale=${locales_to_generate[$((lidx++))]}
+	charmap=${locales_to_generate[$((lidx++))]}
 
-sub get_valid_charmaps ($prefix) {
-	my $top = catdir($prefix, '/usr/share/i18n/charmaps');
-	if (! opendir my $dh, $top) {
-		die "$PROGRAM: Can't open '$top' for reading: $!\n";
-	} elsif (! (my @names = map +( -f "$top/$_" ? s/\.gz\z//r : () ), readdir $dh)) {
-		die "$PROGRAM: Failed to compose a list of valid character maps from '$top'\n";
-	} else {
-		return @names;
-	}
-}
+	# XXX: if we wanted to, we could check existence of
+	#      ${LOCALES}/${locale} and ${CHARMAPS}/${charmap}
+	#      this would fail for things like "en_US.UTF8", but
+	#      in that case we could fall back to checking the
+	#      SUPPORTED file ... then again, the localedef
+	#      below will abort nicely for us ...
+	if [[ -z ${locale} || -z ${charmap} ]] ; then
+		eerror "Bad entry in locale.gen: '${locale} ${charmap}'; skipping"
+		continue
+	fi
 
-sub parse_config ($fh, $path, $locale_by, $charmap_by) {
-	# Set up a helper routine to throw for validation errors.
-	my $thrower = sub ($error, $line) {
-		die sprintf "%s: %s at %s[%d]: %s\n",
-			$PROGRAM, $error, $path, $., render_printable($line);
-	};
+	disp=${locales_disp[$(( cnt - 1 ))]}
 
-	my @locales;
-	while (my $line = readline $fh) {
-		# Skip comments and blank lines. Note that \h will match only " " and
-		# "\t", since the input stream is not being subjected to any decoding.
-		next if $line =~ m/^\h*($|#)/;
+	normalized_locale=$(normalize ${locale})
+	if [[ ${generated_locales} == *" ${normalized_locale} "* ]] ; then
+		already_generated="true"
+	else
+		already_generated="false"
+	fi
+	generated_locales+="${normalized_locale} "
+	if ${already_generated} || \
+	   [[ -n ${UPDATE} && ${existing_locales} == *" ${normalized_locale} "* ]] ; then
+		existing_locales=${existing_locales/ ${normalized_locale} / }
+		if [[ ${QUIET} -eq 0 ]] ; then
+			cnt_fmt=$(printf "%${#total}i" ${cnt})
+			einfo " (${cnt_fmt}/${total}) Skipping ${disp}"
+		fi
+		continue
+	fi
 
-		# Expect for two fields, separated by horizontal whitespace.
-		my @fields;
-		chomp $line;
-		if (2 != (@fields = split /\h+/, trim_line($line), 3)) {
-			$thrower->('Malformed locale declaration', $line);
-		}
+	# If the locale is like 'en_US.UTF8', then we really want 'en_US'
+	if [[ -f ${LOCALES}/${locale} ]] ; then
+		input=${locale}
+	else
+		input=${locale%%.*}
+	fi
 
-		# Extract the specified locale and character map. Upon success,
-		# a canonicalised representation of the locale is also returned.
-		my ($locale, $charmap, $canonical) = parse_entry(@fields);
+	if [[ -z ${JUST_LIST} ]] ; then
+		# Format the output for the question/status
+		cnt_fmt=$(printf "%${#total}i" ${cnt})
+		if [[ -n ${ASK} ]] ; then
+			einfon " (${cnt_fmt}/${total}) Generate ${disp} ? (Y/n) "
+			read user_answer
+			[[ ${user_answer} == [nN]* ]] && continue
+		fi
+		generate_locale
+	else
+		echo "${disp}"
+	fi
+done
 
-		# Validate both locale and character map before accepting.
-		if (! $locale_by->{$locale}) {
-			$thrower->('Invalid locale', $line);
-		} elsif (! $charmap_by->{$charmap}) {
-			$thrower->('Invalid/mismatching charmap', $line);
-		} else {
-			push @locales, [ $locale, $charmap, $canonical ];
-		}
-	}
+for (( i = JOB_IDX_S; i < JOB_IDX_E; ++i )) ; do
+	wait ${JOB_PIDS[i]}
+	JOB_RETS+=( $? )
+done
+ret=$(( 0 ${JOB_RETS[@]/#/+} ))
 
-	return @locales;
-}
+[[ ${QUIET} -eq 0 ]] && [[ -z ${JUST_LIST} ]] && \
+einfo "Generation complete"
 
-sub parse_entry ($locale, $charmap) {
-	my $canonical;
-	if (2 == (my @fields = split /@/, $locale, 3)) {
-		# de_DE@euro ISO-8859-15 => de_DE.ISO-8859-15@euro
-		$canonical = sprintf '%s.%s@%s', $fields[0], $charmap, $fields[1];
-	} elsif (2 == (@fields = split /\./, $locale, 3)) {
-		# en_US.UTF-8 UTF-8 => en_US.UTF-8
-		$locale = $fields[0];
-		$canonical = "$locale.$charmap";
-		if ($fields[1] ne $charmap) {
-			$charmap = '';
-		}
-	} elsif (1 == @fields) {
-		# en_US ISO-8859-1 => en_US.ISO-8859-1
-		$canonical = "$locale.$charmap";
-	}
-	return $locale, $charmap, $canonical;
-}
+if ${LOCALE_ARCHIVE} && [[ -z ${JUST_LIST} ]] ; then
+	# need to check that at least one locale has to be added
+	if [[ $(echo "${LOCALEDIR}"/*/) != "${LOCALEDIR}"'/*/' ]] ; then
+		[[ ${QUIET} -eq 0 ]] && ebegin "Adding locales to archive"
+		# The pattern ends with / on purpose: we don't care about files (like
+		# locale-archive) in the locale subdir, and we definitely don't want to
+		# delete them!
+		for LOC in "${LOCALEDIR}"/*/; do
+			LOC=${LOC%/} # Strip trailing /, since localedef doesn't like it
+			x=$(
+				# In most cases, localedef can just use the system glibc.
+				# However, if we are within a major glibc upgrade, this may fail
+				# in src_* phases since the new localedef links against the new
+				# glibc, but the new glibc is not installed yet...
+				if [[ -z ${INPLACE_GLIBC} ]] ; then
+					"${DESTDIR}"usr/bin/localedef \
+						--add-to-archive "${LOC}" \
+						--replace \
+						--prefix "${DESTDIR%${EPREFIX}/}/"
+				else
+					# We assume that the current directory is "${ED}"/$(get_libdir),
+					# see the glibc ebuild, function glibc_sanity_check(), for why.
+					LC_ALL=C ./ld-*.so --library-path . \
+						"${DESTDIR}"usr/bin/localedef \
+						--add-to-archive "${LOC}" \
+						--replace \
+						--prefix "${DESTDIR%${EPREFIX}/}/"
+				fi
+				ret=$?
+				if [[ -n ${output} ]] ; then
+					echo "${x}"
+				elif [[ ${ret} -ne 0 ]] ; then
+					eerror "${disp}: ${x}"
+				fi
+				if [[ $ret -eq 0 ]]; then
+					rm -r "${LOC}"
+				fi
+				exit ${ret}
+			)
+		done
+		[[ ${QUIET} -eq 0 ]] && eend ${ret}
+	elif [[ ${QUIET} -eq 0 ]] ; then
+		einfo "No locales are to be added to the archive."
+	fi
+fi
 
-sub enter_tempdir ($prefix) {
-	# Given that /tmp might be a tmpfs, prefer /var/tmp so as to avoid
-	# undue memory pressure.
-	my $dir = catdir($prefix, '/var/tmp');
-	if (! -d $dir) {
-		$dir = File::Spec->tmpdir;
-	}
-	$TEMPDIR = tempdir('locale-gen.XXXXXXXXXX', 'DIR' => $dir);
-	if (! chdir $TEMPDIR) {
-		die "$PROGRAM: Can't chdir to '$TEMPDIR': $!\n";
-	}
-}
+# Remove locales that existed but were not requested
+if [[ -n ${UPDATE} ]] && [[ -z ${JUST_LIST} ]] ; then
+	# Ignore these pseudo locales
+	existing_locales=${existing_locales/ C / }
+	existing_locales=${existing_locales/ POSIX / }
+	if [[ -n ${existing_locales// } ]] ; then
+		if [[ -z ${KEEP} ]] ; then
+			[[ ${QUIET} -eq 0 ]] && einfo "Scrubbing old locales:"${existing_locales}
+			cd "${LOCALEDIR}" && rm -rf ${existing_locales}
+		else
+			[[ ${QUIET} -eq 0 ]] && einfo "Keeping old locales:"${existing_locales}
+		fi
+	fi
+fi
 
-sub generate_locales ($prefix, $workers, @locales) {
-	# Trap SIGINT and SIGTERM so that they may be handled gracefully.
-	my $handler = sub ($signal) { $DEFERRED_SIGNAL ||= $signal };
-	local @SIG{'INT', 'TERM'} = ($handler, $handler);
-
-	my $total = scalar @locales;
-	printf "Compiling %d locale definition file%s with %d worker%s ...\n",
-		$total, plural($total), $workers, plural($workers);
-
-	my $num_width = length $total;
-	my %status_by;
-	for my $i (keys @locales) {
-		# Ensure that the number of concurrent workers is bounded.
-		if ($i >= $workers) {
-			my $pid = wait;
-			last if 0 != ($status_by{$pid} = $?);
-		}
-
-		my ($locale, $charmap, $canonical) = $locales[$i]->@*;
-		printf "[%*d/%d] Compiling locale: %s\n",
-			$num_width, $i + 1, $total, $canonical;
-
-		# Fork and execute localedef(1) for locale compilation.
-		if (! defined(my $pid = fork)) {
-			warn "Can't fork: $!";
-			last;
-		} elsif ($pid == 0) {
-			@SIG{'INT', 'TERM'} = ('DEFAULT', 'DEFAULT');
-			compile_locale($locale, $charmap, $canonical);
-		}
-	} continue {
-		last if $DEFERRED_SIGNAL;
-	}
-
-	# Reap any subprocesses that remain.
-	if ($workers > 1) {
-		print "Waiting for active workers to finish their jobs ...\n";
-	}
-	while (-1 != (my $pid = wait)) {
-		$status_by{$pid} = $?;
-	}
-
-	# Abort if any of the collected status codes are found to be non-zero.
-	# In the case that one subprocess was interrupted by a signal while
-	# another exited non-zero, the resulting diagnostic shall allude to the
-	# signal. Such determinism is achieved by sorting the values.
-	for my $status (sort { $a <=> $b } values %status_by) {
-		throw_child_error('localedef', $status);
-	}
-
-	if ($DEFERRED_SIGNAL) {
-		# The signal shall be propagated by the END block.
-		exit;
-	} elsif (scalar %status_by != $total) {
-		die "$PROGRAM: Aborting because not all of the selected locales were compiled\n";
-	}
-}
-
-sub compile_locale ($locale, $charmap, $canonical) {
-	my $output_dir = "./$canonical";
-	my @args = ('--no-archive', '-i', $locale, '-f', $charmap, '--', $output_dir);
-	run_localedef(undef, @args);
-}
-	
-sub generate_archive ($prefix, $locale_dir, $do_update, @canonicals) {
-	# Create the temporary subdir that will contain the new locale archive.
-	my $output_dir = catdir('.', $prefix, $locale_dir);
-	run('mkdir', '-p', '--', $output_dir);
-
-	# Determine the eventual destination path of the archive.
-	my $final_path = catfile($prefix, $locale_dir, 'locale-archive');
-	printf "The location of the archive shall be %s.\n", render_printable($final_path);
-
-	# If --update was specified, make a copy of the existing archive.
-	if ($do_update && -e $final_path) {
-		run('cp', '--', $final_path, "$output_dir/");
-	}
-
-	# Integrate all of the compiled locales into the new locale archive.
-	my $total = scalar @canonicals;
-	printf "Adding %d locale%s to the locale archive ...\n", $total, plural($total);
-	my $stderr = fopen('stderr.log', '+>');
-	redirect_stderr($stderr, sub {
-		my @args = ('--quiet', '--add-to-archive', '--replace', '--', @canonicals);
-		run_localedef('.', @args);
-	});
-
-	# Propagate the diagnostics and errors raised by localedef(1), if any.
-	seek $stderr, 0, SEEK_SET;
-	my $i = 0;
-	while (my $line = readline $stderr) {
-		warn $line;
-		++$i;
-	}
-	close $stderr;
-
-	# Check the status code first.
-	throw_child_error('localedef');
-
-	# Sadly, the exit status of GNU localedef(1) is nigh on useless in the
-	# case that the --add-to-archive option is provided. If anything was
-	# printed to STDERR at all, act as if the utility had exited 1.
-	if ($i > 0) {
-		throw_child_error('localedef', 1 << 8);
-	}
-
-	# The process of replacing the old archive must not be interrupted.
-	local @SIG{'INT', 'TERM'} = ('IGNORE', 'IGNORE');
-
-	# Move the newly minted archive into the appropriate filesystem. Use
-	# mv(1), since there is a chance of crossing a filesystem boundary.
-	my $interim_path = "$final_path.$$";
-	run('mv', '--', catfile($output_dir, 'locale-archive'), $interim_path);
-
-	# Atomically replace the old archive.
-	if (! rename $interim_path, $final_path) {
-		{
-			local $!;
-			unlink $interim_path;
-		}
-		die "$PROGRAM: Can't rename '$interim_path' to '$final_path': $!\n";
-	}
-}
-
-sub run_localedef ($prefix, @args) {
-	# Incorporate the --prefix option, if requested.
-	if (length $prefix) {
-		unshift @args, '--prefix', $prefix;
-	}
-
-	# Prevent the --verbose option from being potentially implied.
-	delete local $ENV{'POSIXLY_CORRECT'};
-
-	# Execute localedef(1). Don't fork if doing so from a child process.
-	my @cmd = ('localedef', @args);
-	if ($$ == $PID) {
-		system @cmd;
-	} elsif (! exec @cmd) {
-		exit 1;
-	}
-}
-
-sub fopen ($path, $mode = '<') {
-	if (! open my $fh, $mode, $path) {
-		die "$PROGRAM: Can't open '$path': $!\n";
-	} elsif (! -f $fh && canonpath($path) !~ m/^\/dev\/(null|stdin)\z/) {
-		die "$PROGRAM: Won't open '$path' because it is not a regular file\n";
-	} else {
-		return $fh;
-	}
-}
-
-sub get_nprocs () {
-	chomp(my $nproc = qx{ { nproc || getconf _NPROCESSORS_CONF; } 2>/dev/null });
-	return $nproc;
-}
-
-sub is_eq_file ($path1, $path2) {
-	# The -ef primary is standard as of POSIX.1-2024.
-	local @ENV{'PATH1', 'PATH2'} = ($path1, $path2);
-	return 0 == system q{ test "$PATH1" -ef "$PATH2" };
-}
-
-sub plural ($int) {
-	return $int == 1 ? '' : 's';
-}
-
-sub redirect_stderr ($stderr, $callback) {
-	if (! open my $old_stderr, '>&', *STDERR) {
-		die "Can't dup STDERR to a new file descriptor: $!";
-	} elsif (! open *STDERR, '>&', $stderr) {
-		my $fileno = fileno $stderr;
-		die "Can't dup file descriptor #$fileno to STDERR: $!";
-	} else {
-		$callback->();
-		open *STDERR, '>&=', $old_stderr;
-	}
-}
-
-sub render_printable ($value) {
-	my $coder = JSON::PP->new->ascii->space_after;
-	return $coder->encode($value);
-}
-
-sub run ($cmd, @args) {
-	system $cmd, @args;
-	throw_child_error($cmd);
-}
-
-sub throw_child_error ($cmd, $status = $?) {
-	if ($status == -1) {
-		# The program could not be started. Since Perl will already
-		# have printed a warning, no supplemental diagnostic is needed.
-		exit 1;
-	} elsif ($status != 0) {
-		my $printable_cmd = render_printable($cmd);
-		my $fate = ($status & 0x7F) ? 'interrupted by a signal' : 'unsuccessful';
-		die "$PROGRAM: Aborting because the execution of $printable_cmd was $fate\n";
-	}
-}
-
-sub trim_line ($line) {
-	return $line =~ s/^\h+|\h+$//gr;
-}
-
-END {
-	if ($$ == $PID) {
-		if (length $TEMPDIR) {
-			local $?;
-			system 'rm', '-r', '--', $TEMPDIR;
-		}
-
-		# The default SIGINT and SIGTERM handlers are suppressed by
-		# generate_locales. The former is especially important, per
-		# http://www.cons.org/cracauer/sigint.html.
-		if ($DEFERRED_SIGNAL) {
-			kill $DEFERRED_SIGNAL, $$;
-		}
-	}
-}
+exit ${ret}
