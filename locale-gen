@@ -422,7 +422,7 @@ sub compile_locale ($locale, $charmap, $canonical) {
 	my @args = ('--no-archive', '-i', $locale, '-f', $charmap, '--', $output_dir);
 	run_localedef(undef, @args);
 }
-	
+
 sub generate_archive ($prefix, $locale_dir, $do_update, @canonicals) {
 	# Create the temporary subdir that will contain the new locale archive.
 	my $output_dir = catdir('.', $prefix, $locale_dir);
