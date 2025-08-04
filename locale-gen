@@ -561,7 +561,9 @@ sub throw_child_error ($cmd, $status = $?) {
 }
 
 sub trim_line ($line) {
-	return $line =~ s/^\h+|\h+$//gr;
+	$line =~ s/^\h+//;
+	$line =~ s/\h+$//;
+	return $line;
 }
 
 END {
