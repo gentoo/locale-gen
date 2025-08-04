@@ -299,8 +299,8 @@ sub parse_config ($fh, $path, $locale_by, $charmap_by) {
 
 	my @locales;
 	while (my $line = readline $fh) {
-		# Skip comments and blank lines. Note that \h will match only " " and
-		# "\t", since the input stream is not being subjected to any decoding.
+		# Skip comments and blank lines. Note that \h will match only
+		# " " and "\t", since the input stream is not being decoded.
 		next if $line =~ m/^\h*($|#)/;
 
 		# Expect for two fields, separated by horizontal whitespace.
