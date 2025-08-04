@@ -113,7 +113,7 @@ delete @ENV{'BASH_ENV', 'CDPATH'};
 	enter_tempdir($prefix);
 
 	# Compile the selected locales.
-	generate_locales($prefix, $opt{'jobs'}, @locales);
+	generate_locales($opt{'jobs'}, @locales);
 
 	# Integrate the newly compiled locales into the system's locale archive.
 	generate_archive($prefix, $locale_dir, $opt{'update'}, map +( $_->[2] ), @locales);
@@ -359,7 +359,7 @@ sub enter_tempdir ($prefix) {
 	}
 }
 
-sub generate_locales ($prefix, $workers, @locales) {
+sub generate_locales ($workers, @locales) {
 	# Trap SIGINT and SIGTERM so that they may be handled gracefully.
 	my $handler = sub ($signal) { $DEFERRED_SIGNAL ||= $signal };
 	local @SIG{'INT', 'TERM'} = ($handler, $handler);
