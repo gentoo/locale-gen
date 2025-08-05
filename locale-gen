@@ -520,12 +520,6 @@ sub get_nprocs () {
 	return $nproc;
 }
 
-sub is_eq_file ($path1, $path2) {
-	# The -ef primary is standard as of POSIX.1-2024.
-	local @ENV{'PATH1', 'PATH2'} = ($path1, $path2);
-	return 0 == system q{ test "$PATH1" -ef "$PATH2" };
-}
-
 sub plural ($int) {
 	return $int == 1 ? '' : 's';
 }
