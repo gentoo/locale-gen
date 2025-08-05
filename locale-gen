@@ -113,7 +113,7 @@ delete @ENV{'BASH_ENV', 'CDPATH'};
 	generate_locales($opt{'jobs'}, @locales);
 
 	# Integrate the newly compiled locales into the system's locale archive.
-	generate_archive($prefix, $locale_dir, $opt{'update'}, map +( $_->[2] ), @locales);
+	generate_archive($prefix, $gentoo_prefix, $locale_dir, $opt{'update'}, map +( $_->[2] ), @locales);
 
 	my $total = scalar @locales;
 	printf "Successfully installed %d locale%s.\n", $total, plural($total);
@@ -173,8 +173,6 @@ sub parse_opts ($known_prefix, @args) {
 	# Validate the options and option-arguments.
 	if ($opt{'all'} && exists $opt{'config'}) {
 		die "$PROGRAM: The --all and --config options are mutually exclusive\n";
-	} elsif (exists $opt{'prefix'} && length $known_prefix && ! is_eq_file($known_prefix, $opt{'prefix'})) {
-		die "$PROGRAM: The --prefix option specifies a path contrary to a detected Gentoo Prefix\n";
 	}
 
 	# Assign values for unspecified options that need them.
@@ -429,9 +427,9 @@ sub compile_locale ($locale, $charmap, $canonical) {
 	run_localedef(undef, @args);
 }
 
-sub generate_archive ($prefix, $locale_dir, $do_update, @canonicals) {
+sub generate_archive ($prefix, $gentoo_prefix, $locale_dir, $do_update, @canonicals) {
 	# Create the temporary subdir that will contain the new locale archive.
-	my $output_dir = catdir('.', $prefix, $locale_dir);
+	my $output_dir = catdir('.', $gentoo_prefix, $locale_dir);
 	run('mkdir', '-p', '--', $output_dir);
 
 	# Determine the eventual destination path of the archive.
