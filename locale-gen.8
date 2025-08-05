@@ -1,39 +1,51 @@
 .TH "locale-gen" "8" "Aug 2025" "Gentoo"
 .SH "NAME"
-locale\-gen \- generate locales on the fly
+locale\-gen \- safely compile and install a glibc locale archive
 .SH "DESCRIPTION"
-The locale\-gen utility is used to manage locales on your system.  Often times
-it merely generates a user configurable list of locales, but it can be used to
-generate a few locales on the fly as needed.
+The locale\-gen utility provides a means by which a system administrator may
+conveniently manage the set of locales that are made available to the GNU C
+Library. It accomplishes this by acting as a user-friendly frontend for the
+standard \fBlocaledef\fR(1) utility, which is used to compile locales and
+integrate them into a single archive.
 
-Normally all locales would be generated at build time, but this leads to waste
-of disk and time as many users really just want a handful on their system.
+A default installation of Gentoo Linux shall provide an archive that contains
+all supported locales, numbering 500 or more. However, it is typical for an
+administrator to require only one or two of these. In that case, the
+\fBlocale.gen\fR(5) configuration file may be populated with a list of the
+required locales. By default, locale-gen shall read this file and compile only
+the locales that are specified, saving both time and space in the longer term.
+
+If the configuration file is missing, empty, or consists only of comments,
+locale-gen shall act in one of two ways, depending on whether the
+\fB--config\fR option was specified. If specified then locale-gen shall abort
+with a suitable diagnostic message. Otherwise, locale-gen shall act as if the
+\fB--all\fR option had been specified.
+
 .SH "OPTIONS"
 .TP
 \fB\-A\fR, \fB\-\-all\fR
-Generate all possible locales
+Compile all locales that are officially supported by glibc
 .TP
 \fB\-c\fR, \fB\-\-config\fR \fI<config>\fR
-Use specified \fIconfig\fR file rather than default /etc/locale.gen
+Read the given \fIconfig\fR file (defaults to /etc/locale.gen)
 .TP
-\fB\-d\fR, \fB\-\-prefix\fR \fI<dir>\fR
-Look for locale definitions and store generated locale data in the specified
-\fIdirectory\fR
+\fB\-d\fR, \fB\-\-prefix\fR \fI<directory>\fR
+Treat most filesystem paths as being relative to the given \fIdirectory\fR (defaults to / if not a Gentoo Prefix system)
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-Show the help output (imagine that)
+Write out a synopsis and summary of the supported options then exit
 .TP
-\fB\-j\fR, \fB\-\-jobs\fR \fI<num>\fR
-Generate the specified \fInumber\fR of locales in parallel
+\fB\-j\fR, \fB\-\-jobs\fR \fI<integer>\fR
+Spawn up to \fIinteger\fR workers to compile locales in parallel (defaults to the number of logical processors)
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
-Only spit out errors
+Suppress the writing of informational messages to standard output
 .TP
 \fB\-u\fR, \fB\-\-update\fR
-Only generate locales that do not already exist (normally existing locales are regenerated)
+Suppress the compilation of locales that are already installed (not recommended)
 .TP
 \fB\-V\fR, \fB\-\-version\fR
-Report the program version
+Write out some details regarding the program then exit
 .SH "AUTHORS"
 .fi
 Version 3.0 is the work of Kerin Millar <kfm@plushkava.net>.
@@ -43,7 +55,11 @@ Prior versions are chiefly the work of Mike Frysinger <vapier@google.com>.
 .SH "REPORTING BUGS"
 Please report bugs via http://bugs.gentoo.org/
 .SH "FILES"
-\fB/etc/locale.gen\fR \- locale list
+\fB/etc/locale.gen\fR \- specifies the locales to be compiled
+.br
+\fB/usr/share/i18n/SUPPORTED\fR \- a list of officially supported locales
+.br
+\fB/usr/lib/locale/locale-archive\fR \- contains the currently installed locales
 .SH "SEE ALSO"
 .BR locale (1),
 .BR localedef (1),
