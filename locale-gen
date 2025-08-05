@@ -39,6 +39,9 @@ if (setlocale(LC_ALL) eq 'C') {
 # CDPATH also, for it is nothing but a liability in a non-interactive context.
 delete @ENV{'BASH_ENV', 'CDPATH'};
 
+# Protect against the inheritance of an unduly restrictive umask.
+umask 0022;
+
 {
 	# Determine the locale directory, as reported by localedef(1).
 	my $locale_dir = get_locale_dir();
@@ -342,7 +345,10 @@ sub parse_entry ($locale, $charmap) {
 }
 
 sub check_archive_dir ($prefix, $locale_dir) {
-	my $archive_dir = catdir($prefix, $locale_dir);
+	my $archive_dir = local $ENV{'DIR'} = catdir($prefix, $locale_dir);
+
+	# Quietly attempt to create the directory if it does not already exist.
+	system q{ mkdir -p -- "$DIR" 2>/dev/null };
 
 	# Check whether the directory exists and can be modified by the EUID.
 	if (! utime undef, undef, $archive_dir) {
