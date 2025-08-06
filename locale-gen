@@ -268,13 +268,16 @@ sub read_config ($prefix, @paths) {
 }
 
 sub get_valid_locales ($prefix) {
-	my $top = local $ENV{'TOP'} = catdir($prefix, '/usr/share/i18n/locales');
-	my @paths = qx{ cd -- "\$TOP" && find . ! -path . -prune ! -path '*\n*' -type f -exec grep -lxF LC_IDENTIFICATION {} + };
-	if ($? != 0 || ! @paths) {
+	my $top = catdir($prefix, '/usr/share/i18n/locales');
+	my $cmd = qq{ find . ! -path . -prune ! -path '*\n*' -type f -exec grep -lxF LC_IDENTIFICATION {} + };
+	if (! chdir $top) {
+		die "$PROGRAM: Can't chdir to '$top': $!\n";
+	} elsif (! (my @paths = readpipe $cmd) || $? != 0) {
 		die "$PROGRAM: Failed to compose a list of valid locale names from '$top'\n";
+	} else {
+		chomp @paths;
+		return map +( (splitpath($_))[-1] ), @paths;
 	}
-	chomp @paths;
-	return map +( (splitpath($_))[-1] ), @paths;
 }
 
 sub get_valid_charmaps ($prefix) {
