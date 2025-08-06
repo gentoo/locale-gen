@@ -176,6 +176,8 @@ sub parse_opts ($known_prefix, @args) {
 	# Validate the options and option-arguments.
 	if ($opt{'all'} && exists $opt{'config'}) {
 		die "$PROGRAM: The --all and --config options are mutually exclusive\n";
+	} elsif (length $opt{'prefix'} && $opt{'prefix'} !~ m/^\//) {
+		die "$PROGRAM: The --prefix option must specify either a null string or an absolute path\n";
 	}
 
 	# Assign values for unspecified options that need them.
