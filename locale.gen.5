@@ -14,7 +14,7 @@
 .\" You should have received a copy of the GNU General Public License
 .\" along with this program; if not, write to the Free Software Foundation,
 .\" Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-.TH locale.gen 5 "July 2005" "Debian GNU/Linux"
+.TH locale.gen 5 "August 2025" "Gentoo"
 .SH "NAME"
 locale.gen \- Configuration file for locale-gen
 .SH "DESCRIPTION"
@@ -42,20 +42,6 @@ command will generate all the locales, placing them in
 \fB/usr/lib/locale\fP.
 
 Comments start with the hash mark # and may only be on new lines.
-.SH "OPTIONS"
-Options start with #% (to preserve backwards compatibility).
-
-# This enables the "foo" option.
-.br
-#%foo
-.TP
-.B no-locale-archive
-Disable generation of the locale archive file and instead generate multiple
-files/directories for each locale.  This slows down runtime greatly (by having
-multiple files spread out in the filesystem instead of a single binary file),
-but it does mean build time is much faster (as you can generate in parallel).
-
-You should not use this option.
 .SH "EXAMPLES"
 .nf
 # Create a "en_US" locale using ISO-8859-1 encoding.
