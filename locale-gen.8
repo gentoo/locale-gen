@@ -1,6 +1,22 @@
 .TH "locale-gen" "8" "Aug 2025" "Gentoo"
 .SH "NAME"
 locale\-gen - safely compile and install a glibc locale archive
+.SH "SYNOPSIS"
+.SY locale-gen
+.RB [ \-Aqu ]
+.RB [ \-c\~\c
+.IR config ]
+.RB [ \-j\~\c
+.IR jobs ]
+.RB [ \-p\~\c
+.IR prefix ]
+.YS
+.SY locale-gen
+.B \-h
+.YS
+.SY locale-gen
+.B \-V
+.YS
 .SH "DESCRIPTION"
 The locale\-gen utility provides a means by which a system administrator may
 conveniently manage the set of locales that are made available to the GNU C
@@ -28,14 +44,14 @@ Compile all locales that are officially supported by glibc.
 \fB\-c\fR, \fB\-\-config\fR \fIconfig\fR
 Read the given \fIconfig\fR file (defaults to /etc/locale.gen).
 .TP
-\fB\-d\fR, \fB\-\-prefix\fR \fIdirectory\fR
-Treat most filesystem paths as being relative to the given \fIdirectory\fR (defaults to / if not a Gentoo Prefix system).
+\fB\-d\fR, \fB\-\-prefix\fR \fIprefix\fR
+Treat most filesystem paths as being relative to the specified \fIprefix\fR (defaults to / if not a Gentoo Prefix system).
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 Write out a synopsis and summary of the supported options then exit.
 .TP
-\fB\-j\fR, \fB\-\-jobs\fR \fIinteger\fR
-Spawn up to \fIinteger\fR workers to compile locales in parallel (defaults to the number of logical processors).
+\fB\-j\fR, \fB\-\-jobs\fR \fIjobs\fR
+Spawn up to the specified number of \fIjobs\fR to compile locales in parallel (defaults to the number of logical processors).
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
 Suppress the writing of informational messages to standard output.
