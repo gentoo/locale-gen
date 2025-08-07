@@ -47,14 +47,22 @@ umask 0022;
 	my $locale_dir = get_locale_dir();
 
 	# Infer the path of a Gentoo Prefix environment, if any.
-	my $gentoo_prefix = detect_gentoo_prefix($locale_dir);
-	if (length $gentoo_prefix) {
-		$locale_dir =~ s/^\Q$gentoo_prefix//;
+	my $gentoo_prefix = '';
+	if (defined $locale_dir) {
+		$gentoo_prefix = detect_gentoo_prefix($locale_dir);
+		if (length $gentoo_prefix) {
+			$locale_dir =~ s/^\Q$gentoo_prefix//;
+		}
 	}
 
 	# Collect any supported options and option-arguments.
 	my %opt = parse_opts($gentoo_prefix, @ARGV);
 	my $prefix = $opt{'prefix'} // $gentoo_prefix;
+
+	# For the directory to be unknown strongly implies the absence of glibc.
+	if (! defined $locale_dir) {
+		die "$PROGRAM: Aborting because the OS does not appear to use GNU libc\n";
+	}
 
 	# Honour the --quiet option.
 	if ($opt{'quiet'} && ! open *STDOUT, '>/dev/null') {
@@ -128,7 +136,7 @@ sub get_locale_dir () {
 		return canonpath($1);
 	} elsif (($? & 0xFF) == 0) {
 		# The child terminated normally (in the sense of WIFEXITED).
-		die "$PROGRAM: Aborting because the OS does not appear to use GNU libc\n";
+		return undef;
 	} else {
 		throw_child_error('localedef');
 	}
