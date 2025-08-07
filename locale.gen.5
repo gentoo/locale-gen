@@ -1,63 +1,81 @@
-.\" -*- nroff -*-
-.\" Copyright (C) 2002, 2005 Free Software Foundation, Inc.
-.\"
-.\" This program is free software; you can redistribute it and/or modify
-.\" it under the terms of the GNU General Public License as published by
-.\" the Free Software Foundation; either version 2, or (at your option)
-.\" any later version.
-.\"
-.\" This program is distributed in the hope that it will be useful,
-.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
-.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.\" GNU General Public License for more details.
-.\"
-.\" You should have received a copy of the GNU General Public License
-.\" along with this program; if not, write to the Free Software Foundation,
-.\" Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 .TH locale.gen 5 "August 2025" "Gentoo"
 .SH "NAME"
-locale.gen \- Configuration file for locale-gen
+locale.gen - configuration file for locale\-gen
 .SH "DESCRIPTION"
-The file \fB/etc/locale.gen\fP lists the locales that are to be generated
-by the \fBlocale-gen\fP command.
-
-Each line is of the form:
-
-<locale name> <charset>
-
-Where <locale name> starts with a name as found in
-.BR /usr/share/i18n/locales/ .
-It must be unique in the file as it is used as the key to locale variables
-(e.g. when you do `export LANG="<locale name>"`).  For default encodings,
-the <charset> is typically omitted, else it is appended with a "." separator.
-
-Where <charset> is one of the character sets listed in
-.B /usr/share/i18n/charmaps
-(sans any suffix like ".gz").  It should use the same naming conventions too --
-all caps, and dashes/underscores included.  e.g. Use "UTF-8", not "utf8".
-
-The
-.B locale-gen
-command will generate all the locales, placing them in
-\fB/usr/lib/locale\fP.
-
-Comments start with the hash mark # and may only be on new lines.
+The \fBlocale\-gen\fR(8) utility compiles the locales specified by the
+\fI/etc/locale.gen\fR file and integrates them into a locale archive.
+.P
+If present, the file must be comprised by zero or more lines, each of which
+must be comprised by two fields, separated by one or more <blank> characters.
+Leading and trailing <blank> characters are permitted. The first field shall be
+considered as a \fIlocalename\fR and the second field as a \fIcharmap\fR. The
+\fI/usr/share/i18n/SUPPORTED\fR file contains a complete list of the supported
+combinations.
+.P
+Lines that are empty, or which contain only <blank> characters, shall be
+disregarded. Also, lines that begin with zero or more <blank> characters,
+followed by a <number\-sign> character,  shall be considered as comments and
+disregarded.
+.P
+The definition of a <blank> character is that it is either the <tab> or <space>
+character.
+.SH "LOCALE NAMES"
+The GNU C Library employs a locale naming scheme that is based upon the X/Open
+Portability Guide (XPG). A \fIlocalename\fR is composed of between one and four
+parts.
+.P
+.RS
+.EX
+language[_territory[.codeset]][@modifier]
+.EE
+.RE
+.P
+A complete list of supported \fIlocalename\fR values can be obtained by reading
+the first column of the \fI/usr/share/i18n/SUPPORTED\fR file.
+.P
+Assuming that a given locale is available, it can be effected by assigning its
+\fIlocalename\fR to the LANG environment variable.
+.SH "CHARACTER MAPS"
+A \fIcharmap\fR, also known as a character set or codeset, is a mapping of
+character symbols and collating element symbols to actual character encodings,
+allowing for computers to encode and decode text in a standard way.
+.P
+A complete list of supported \fIcharmap\fR values can be obtained by reading
+the second column of the \fI/usr/share/i18n/SUPPORTED\fR file.
+.P
+Given that not all values of \fIlocalename\fR incorporate a codeset, the
+configuration file requires for the second field of each line to define a
+\fIcharmap\fR.
 .SH "EXAMPLES"
-.nf
-# Create a "en_US" locale using ISO-8859-1 encoding.
-# When you set LANG=en_US or LANG=en_US.ISO-8859-1, this is used.
-.B en_US ISO-8859-1
-
-# Create a "en_US" locale using UTF-8 encoding.
-# When you set LANG=en_US.UTF-8, this is used.
-.B en_US.UTF-8 UTF-8
-.fi
+.EX
+# This is a comment, followed by some valid locale declarations.
+en_US.UTF\-8  UTF\-8
+zh_CN.UTF\-8  UTF\-8
+de_DE.UTF\-8  UTF\-8
+hi_IN.UTF\-8  UTF\-8
+jp_JP.UTF\-8  UTF\-8
+.sp
+# This is invalid because the charmap field is missing.
+en_US.UTF\-8
+.sp
+# This is invalid because the charmap does not match the codeset.
+en_US.UTF\-8  ISO\-8859\-1
+.EE
+.SH "FILES"
+.TP
+.I /etc/locale.gen
+The default location of the configuration file.
+.TP
+.I /usr/share/i18n/SUPPORTED
+A list of supported \fIlocalename\fR and \fIcharmap\fR combinations.
 .SH "SEE ALSO"
 .BR locale (1),
 .BR localedef (1),
-.BR locale-gen (8)
+.BR locale.conf (5),
+.BR locale\-gen (8)
 .SH "AUTHORS"
 .nf
 Alastair McKinstry <mckinstry@computer.org>
 Mike Frysinger <vapier@gentoo.org>
+Kerin Millar <kfm@plushkava.net>
 .fi
