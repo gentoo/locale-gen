@@ -1,6 +1,6 @@
 .TH "locale-gen" "8" "Aug 2025" "Gentoo"
 .SH "NAME"
-locale\-gen \- safely compile and install a glibc locale archive
+locale\-gen - safely compile and install a glibc locale archive
 .SH "DESCRIPTION"
 The locale\-gen utility provides a means by which a system administrator may
 conveniently manage the set of locales that are made available to the GNU C
@@ -12,14 +12,14 @@ A default installation of Gentoo Linux shall provide an archive that contains
 all supported locales, numbering 500 or more. However, it is typical for an
 administrator to require only one or two of these. In that case, the
 \fBlocale.gen\fR(5) configuration file may be populated with a list of the
-required locales. By default, locale-gen shall read this file and compile only
+required locales. By default, locale\-gen shall read this file and compile only
 the locales that are specified, saving both time and space in the longer term.
 
 If the configuration file is missing, empty, or consists only of comments,
-locale-gen shall act in one of two ways, depending on whether the
-\fB--config\fR option was specified. If specified then locale-gen shall abort
-with a suitable diagnostic message. Otherwise, locale-gen shall act as if the
-\fB--all\fR option had been specified.
+locale\-gen shall act in one of two ways, depending on whether the
+\fB\-\-config\fR option was specified. If specified then locale\-gen shall abort
+with a suitable diagnostic message. Otherwise, locale\-gen shall act as if the
+\fB\-\-all\fR option had been specified.
 
 .SH "OPTIONS"
 .TP
@@ -55,11 +55,11 @@ Prior versions are chiefly the work of Mike Frysinger <vapier@google.com>.
 .SH "REPORTING BUGS"
 Please report bugs via http://bugs.gentoo.org/
 .SH "FILES"
-\fB/etc/locale.gen\fR \- specifies the locales to be compiled
+\fB/etc/locale.gen\fR - specifies the locales to be compiled
 .br
-\fB/usr/share/i18n/SUPPORTED\fR \- a list of officially supported locales
+\fB/usr/share/i18n/SUPPORTED\fR - a list of officially supported locales
 .br
-\fB/usr/lib/locale/locale-archive\fR \- contains the currently installed locales
+\fB/usr/lib/locale/locale\-archive\fR - contains the currently installed locales
 .SH "SEE ALSO"
 .BR locale (1),
 .BR localedef (1),
