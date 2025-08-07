@@ -7,20 +7,19 @@ conveniently manage the set of locales that are made available to the GNU C
 Library. It accomplishes this by acting as a user-friendly frontend for the
 standard \fBlocaledef\fR(1) utility, which is used to compile locales and
 integrate them into a single archive.
-
+.P
 A default installation of Gentoo Linux shall provide an archive that contains
 all supported locales, numbering 500 or more. However, it is typical for an
 administrator to require only one or two of these. In that case, the
 \fBlocale.gen\fR(5) configuration file may be populated with a list of the
 required locales. By default, locale\-gen shall read this file and compile only
 the locales that are specified, saving both time and space in the longer term.
-
+.P
 If the configuration file is missing, empty, or consists only of comments,
 locale\-gen shall act in one of two ways, depending on whether the
 \fB\-\-config\fR option was specified. If specified then locale\-gen shall abort
 with a suitable diagnostic message. Otherwise, locale\-gen shall act as if the
 \fB\-\-all\fR option had been specified.
-
 .SH "OPTIONS"
 .TP
 \fB\-A\fR, \fB\-\-all\fR
