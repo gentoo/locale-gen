@@ -22,7 +22,7 @@ use experimental qw(try);
 my $PROGRAM;
 BEGIN { $PROGRAM = (splitpath(__FILE__))[-1]; }
 
-my $VERSION = '3.1';
+my $VERSION = '3.2';
 
 my $DEFERRED_SIGNAL = '';
 my $PID = $$;
