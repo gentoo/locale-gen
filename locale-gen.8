@@ -61,6 +61,16 @@ Suppress the compilation of locales that are already installed (not recommended)
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Write out some details regarding the program then exit.
+.SH "FILES"
+.TP
+.I /etc/locale.gen
+Specifies the locales to be compiled.
+.TP
+.I /usr/share/i18n/SUPPORTED
+A list of officially supported locales.
+.TP
+.I /usr/lib/locale/locale\-archive
+Contains the currently installed locales.
 .SH "AUTHORS"
 Version 3.0 is the work of
 .MT kfm@\:plushkava\:.net
@@ -75,16 +85,6 @@ Mike Frysinger
 Please report bugs via
 .UR https://\:bugs\:.gentoo\:.org/
 .UE .
-.SH "FILES"
-.TP
-.I /etc/locale.gen
-Specifies the locales to be compiled.
-.TP
-.I /usr/share/i18n/SUPPORTED
-A list of officially supported locales.
-.TP
-.I /usr/lib/locale/locale\-archive
-Contains the currently installed locales.
 .SH "SEE ALSO"
 .BR locale (1),
 .BR localedef (1),
