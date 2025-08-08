@@ -131,7 +131,7 @@ umask 0022;
 }
 
 sub get_locale_dir () {
-	my $stdout = qx{ localedef --help 2>/dev/null };
+	my $stdout = qx{ LC_ALL=C localedef --help 2>/dev/null };
 	if ($? == 0 && $stdout =~ m/\hlocale path\h*:\s+(\/[^:]+)/) {
 		return canonpath($1);
 	} elsif (($? & 0xFF) == 0) {
