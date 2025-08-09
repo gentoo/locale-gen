@@ -328,13 +328,15 @@ sub parse_config ($fh, $path, $locale_by, $charmap_by) {
 
 		# Extract the specified locale and character map. Upon success,
 		# a canonicalised representation of the locale is also returned.
-		my ($locale, $charmap, $canonical) = parse_entry(@fields);
+		my ($locale, $codeset, $charmap, $canonical) = parse_entry(@fields);
 
 		# Validate both locale and character map before accepting.
 		if (! $locale_by->{$locale}) {
 			$thrower->('Invalid locale', $line);
+		} elsif (defined $codeset && $codeset ne $charmap) {
+			$thrower->('Mismatching codeset/charmap', $line);
 		} elsif (! $charmap_by->{$charmap}) {
-			$thrower->('Invalid/mismatching charmap', $line);
+			$thrower->('Invalid charmap', $line);
 		} else {
 			push @locales, [ $locale, $charmap, $canonical ];
 		}
@@ -345,21 +347,19 @@ sub parse_config ($fh, $path, $locale_by, $charmap_by) {
 
 sub parse_entry ($locale, $charmap) {
 	my $canonical;
+	my $codeset;
 	if (2 == (my @fields = split /@/, $locale, 3)) {
 		# de_DE@euro ISO-8859-15 => de_DE.ISO-8859-15@euro
 		$canonical = sprintf '%s.%s@%s', $fields[0], $charmap, $fields[1];
 	} elsif (2 == (@fields = split /\./, $locale, 3)) {
 		# en_US.UTF-8 UTF-8 => en_US.UTF-8
-		$locale = $fields[0];
-		$canonical = "$locale.$charmap";
-		if ($fields[1] ne $charmap) {
-			$charmap = '';
-		}
+		($locale, $codeset) = @fields;
+		$canonical = "$locale.$codeset";
 	} elsif (1 == @fields) {
 		# en_US ISO-8859-1 => en_US.ISO-8859-1
 		$canonical = "$locale.$charmap";
 	}
-	return $locale, $charmap, $canonical;
+	return $locale, $codeset, $charmap, $canonical;
 }
 
 sub check_archive_dir ($prefix, $locale_dir) {
