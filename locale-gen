@@ -215,6 +215,8 @@ sub show_usage (@options) {
 		my ($long, $short) = split /[|=]/, $spec;
 		printf {$pipe} "-%s, --%s\037%s\n", $short, $long, $description;
 	}
+	close $pipe;
+	print "\nSee also: locale-gen(8), locale.gen(5)\n";
 }
 
 sub show_version () {
