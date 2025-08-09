@@ -32,10 +32,10 @@ required locales. By default, locale\-gen shall read this file and compile only
 the locales that are specified, saving both time and space in the longer term.
 .P
 If the configuration file is missing, empty, or consists only of comments,
-locale\-gen shall act in one of two ways, depending on whether the
-\fB\-\-config\fR option was specified. If specified then locale\-gen shall abort
-with a suitable diagnostic message. Otherwise, locale\-gen shall act as if the
-\fB\-\-all\fR option had been specified.
+locale\-gen shall act in one of two ways, depending on whether the \fB\-c\fR
+option was specified. If specified then locale\-gen shall abort with a suitable
+diagnostic message. Otherwise, locale\-gen shall act as if the \fB\-A\fR option
+had been specified.
 .SH "OPTIONS"
 .TP
 \fB\-A\fR, \fB\-\-all\fR
@@ -71,6 +71,16 @@ A list of officially supported locales.
 .TP
 .I /usr/lib/locale/locale\-archive
 Contains the currently installed locales.
+.SH "EXIT STATUS"
+The exit status shall be 0 under any of these conditions:
+.IP \[bu] 2
+the \fB\-h\fR and/or \fB\-V\fR options were specified
+.IP \[bu] 2
+the \fB\-u\fR option was specified but no locales need compiling
+.IP \[bu] 2
+the options and \fIconfig\fR were validated, the specified locales compiled and the resulting archive installed, without error
+.P
+Otherwise, the exit status shall be greater than 0.
 .SH "AUTHORS"
 Version 3.0 is the work of
 .MT kfm@\:plushkava\:.net
