@@ -7,6 +7,7 @@
 
 use v5.36;
 
+use Cwd qw(getcwd);
 use Errno qw(ENOENT);
 use Fcntl qw(SEEK_SET);
 use File::Spec::Functions qw(canonpath catfile catdir splitpath);
@@ -283,12 +284,15 @@ sub read_config ($prefix, @paths) {
 }
 
 sub get_valid_locales ($prefix) {
-	my $top = catdir($prefix, '/usr/share/i18n/locales');
 	my $cmd = qq{ find . ! -path . -prune ! -path '*\n*' -type f -exec grep -lxF LC_IDENTIFICATION {} + };
+	my $top = catdir($prefix, '/usr/share/i18n/locales');
+	my $pwd = getcwd();
 	if (! chdir $top) {
 		die "$PROGRAM: Can't chdir to '$top': $!\n";
 	} elsif (! (my @paths = readpipe $cmd) || $? != 0) {
 		die "$PROGRAM: Failed to compose a list of valid locale names from '$top'\n";
+	} elsif (defined $pwd && ! chdir $pwd) {
+		die "$PROGRAM: Can't chdir to '$pwd': $!\n";
 	} else {
 		chomp @paths;
 		return map +( (splitpath($_))[-1] ), @paths;
