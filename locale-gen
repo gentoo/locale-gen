@@ -370,7 +370,8 @@ sub check_archive_dir ($prefix, $locale_dir) {
 
 	# Check whether the directory exists and can be modified by the EUID.
 	if (! utime undef, undef, $archive_dir) {
-		die "$PROGRAM: Aborting because UID $> can't modify '$archive_dir': $!\n";
+		my $username = get_username();
+		die "$PROGRAM: Aborting because '$username' can't modify '$archive_dir': $!\n";
 	}
 }
 
@@ -586,6 +587,11 @@ sub trim_line ($line) {
 	$line =~ s/^\h+//;
 	$line =~ s/\h+$//;
 	return $line;
+}
+
+sub get_username () {
+	local $!;
+	return getpwuid($>) // $ENV{'LOGNAME'};
 }
 
 END {
