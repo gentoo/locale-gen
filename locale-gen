@@ -329,6 +329,9 @@ sub parse_config ($fh, $path, $locale_by, $charmap_by) {
 		# " " and "\t", since the input stream is not being decoded.
 		next if $line =~ m/^\h*($|#)/;
 
+		# Permit comments trailing locale declarations.
+		$line =~ s/\h\K#\h.*//;
+
 		# Expect for two fields, separated by horizontal whitespace.
 		my @fields;
 		chomp $line;
