@@ -117,10 +117,11 @@ umask 0022;
 	generate_locales($opt{'jobs'}, @locales);
 
 	# Integrate the newly compiled locales into the system's locale archive.
-	generate_archive($prefix, $gentoo_prefix, $locale_dir, $opt{'update'}, map +( $_->[2] ), @locales);
+	my $size = generate_archive($prefix, $gentoo_prefix, $locale_dir, $opt{'update'}, map +( $_->[2] ), @locales);
 
-	my $total = scalar @locales;
-	printf "Successfully installed %d locale%s.\n", $total, plural($total);
+	my $total += scalar @locales + scalar %installed_by;
+	printf "Successfully installed an archive containing %d locale%s, of %s MiB in size.\n",
+		$total, plural($total), round($size / 2 ** 20);
 }
 
 sub get_locale_dir () {
@@ -523,6 +524,13 @@ sub generate_archive ($prefix, $gentoo_prefix, $locale_dir, $do_update, @canonic
 		}
 		die "$PROGRAM: Can't rename '$interim_path' to '$final_path': $!\n";
 	}
+
+	# Return the size of the archive, in bytes.
+	if (! (my @stat = stat $final_path)) {
+		die "$PROGRAM: Can't stat '$final_path': $!\n";
+	} else {
+		return $stat[7];
+	}
 }
 
 sub run_localedef ($prefix, @args) {
@@ -605,6 +613,11 @@ sub trim_line ($line) {
 sub get_username () {
 	local $!;
 	return getpwuid($>) // $ENV{'LOGNAME'};
+}
+
+sub round ($number) {
+	# Evaluation conveniently trims insignificant trailing zeroes.
+	return eval(sprintf '%.2f', $number);
 }
 
 END {
