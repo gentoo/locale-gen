@@ -2,29 +2,15 @@
 .SH "NAME"
 locale.gen - configuration file for locale\-gen
 .SH "DESCRIPTION"
-The \fBlocale\-gen\fR(8) utility compiles the locales specified by the
-\fI/etc/locale.gen\fR file and integrates them into a locale archive.
+The \fBlocale\-gen\fR(8) utility compiles the locales specified by the \fI/etc/locale.gen\fR file and integrates them into a locale archive.
 .P
-If present, the file must be comprised by zero or more lines, each of which
-must be comprised by two fields, separated by one or more <blank> characters.
-Leading and trailing <blank> characters are permitted. The first field shall be
-considered as a \fIlocalename\fR and the second field as a \fIcharmap\fR. The
-\fI/usr/share/i18n/SUPPORTED\fR file contains a complete list of the supported
-combinations.
+If present, the file must be comprised by zero or more lines, each of which must be comprised by two fields, separated by one or more <blank> characters.  Leading and trailing <blank> characters are permitted. The first field shall be considered as a \fIlocalename\fR and the second field as a \fIcharmap\fR. The \fI/usr/share/i18n/SUPPORTED\fR file contains a complete list of the supported combinations.
 .P
-Lines that are empty, or which contain only <blank> characters, shall be
-disregarded. Lines that begin with zero or more <blank> characters, followed by
-a <number\-sign> character, shall be considered as comments and disregarded.
-Further, the two fields that form a locale definition may be followed by a
-comment, provided that its leading <number\-sign> character is enclosed by
-<blank> characters.
+Lines that are empty, or which contain only <blank> characters, shall be disregarded. Lines that begin with zero or more <blank> characters, followed by a <number\-sign> character, shall be considered as comments and disregarded. Further, the two fields that form a locale definition may be followed by a comment, provided that its leading <number\-sign> character is enclosed by <blank> characters.
 .P
-The definition of a <blank> character is that it is either the <tab> or <space>
-character.
+The definition of a <blank> character is that it is either the <tab> or <space> character.
 .SH "LOCALE NAMES"
-The GNU C Library employs a locale naming scheme that is based upon the X/Open
-Common Applications Environment (CAE) Portability Guide Issue 4 (XPG4)
-specification. A \fIlocalename\fR is composed of between one and four parts.
+The GNU C Library employs a locale naming scheme that is based upon the X/Open Common Applications Environment (CAE) Portability Guide Issue 4 (XPG4) specification. A \fIlocalename\fR is composed of between one and four parts.
 .P
 .RS
 .EX
@@ -32,22 +18,15 @@ language[_territory][.codeset][@modifier]
 .EE
 .RE
 .P
-A complete list of supported \fIlocalename\fR values can be obtained by reading
-the first column of the \fI/usr/share/i18n/SUPPORTED\fR file.
+A complete list of supported \fIlocalename\fR values can be obtained by reading the first column of the \fI/usr/share/i18n/SUPPORTED\fR file.
 .P
-Assuming that a given locale is available, it can be effected by assigning its
-\fIlocalename\fR to the LANG environment variable.
+Assuming that a given locale is available, it can be effected by assigning its \fIlocalename\fR to the LANG environment variable.
 .SH "CHARACTER MAPS"
-A \fIcharmap\fR, also known as a character set or codeset, is a mapping of
-character symbols and collating element symbols to actual character encodings,
-allowing for computers to encode and decode text in a standard way.
+A \fIcharmap\fR, also known as a character set or codeset, is a mapping of character symbols and collating element symbols to actual character encodings, allowing for computers to encode and decode text in a standard way.
 .P
-A complete list of supported \fIcharmap\fR values can be obtained by reading
-the second column of the \fI/usr/share/i18n/SUPPORTED\fR file.
+A complete list of supported \fIcharmap\fR values can be obtained by reading the second column of the \fI/usr/share/i18n/SUPPORTED\fR file.
 .P
-Given that not all values of \fIlocalename\fR incorporate a codeset, the
-configuration file requires for the second field of each line to define a
-\fIcharmap\fR.
+Given that not all values of \fIlocalename\fR incorporate a codeset, the configuration file requires for the second field of each line to define a \fIcharmap\fR.
 .SH "EXAMPLES"
 .EX
 # This is a comment, followed by some valid locale declarations.
