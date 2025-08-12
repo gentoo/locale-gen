@@ -36,9 +36,8 @@ if (setlocale(LC_ALL) eq 'C') {
 	delete @ENV{ grep +( m/^(LANG\z|LC_)/ ), keys %ENV };
 }
 
-# Unset BASH_ENV for security reasons. Even as sh(1), bash acts upon it. Unset
-# CDPATH also, for it is nothing but a liability in a non-interactive context.
-delete @ENV{'BASH_ENV', 'CDPATH'};
+# Unset BASH_ENV for security reasons. Even as sh(1), bash acts upon it.
+delete $ENV{'BASH_ENV'};
 
 # Protect against the inheritance of an unduly restrictive umask.
 umask 0022;
