@@ -249,11 +249,14 @@ sub list_locales ($prefix) {
 }
 
 sub normalize ($canonical) {
-	if (2 == (my ($locale, $charmap) = split /\./, $canonical, 3)) {
-		# en_US.UTF-8 => en_US.utf8; en_US.ISO-8859-1 => en_US.iso88591
-		return join '.', $locale, lc($charmap =~ s/-//gr);
-	} else {
+	# This is similar to the normalize_codeset() function of localedef(1).
+	if ($canonical !~ m/(?<=\.)[^@]+/p) {
 		die "Can't normalize " . render_printable($canonical);
+	} else {
+		# en_US.UTF-8            => en_US.utf8
+		# de_DE.ISO-8859-15@euro => de_DE.iso885915@euro
+		my $codeset = lc ${^MATCH} =~ tr/0-9A-Za-z//cdr;
+		return ${^PREMATCH} . $codeset . ${^POSTMATCH};
 	}
 }
 
