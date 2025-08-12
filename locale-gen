@@ -127,7 +127,7 @@ sub get_locale_dir () {
 	my $stdout = qx{ LC_ALL=C localedef --help 2>/dev/null };
 	if ($? == 0 && $stdout =~ m/\hlocale path\h*:\s+(\/[^:]+)/) {
 		return canonpath($1);
-	} elsif (($? & 0xFF) == 0) {
+	} elsif (($? & 0x7F) == 0) {
 		# The child terminated normally (in the sense of WIFEXITED).
 		return undef;
 	} else {
