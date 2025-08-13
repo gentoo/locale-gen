@@ -111,7 +111,7 @@ umask 0022;
 	check_archive_dir($prefix, $locale_dir);
 
 	# Create a temporary directory and switch to it.
-	enter_tempdir($prefix);
+	$TEMPDIR = enter_tempdir($prefix);
 
 	# Compile the selected locales.
 	generate_locales($opt{'jobs'}, @locales);
@@ -400,9 +400,11 @@ sub enter_tempdir ($prefix) {
 	if (! -d $dir) {
 		$dir = File::Spec->tmpdir;
 	}
-	$TEMPDIR = tempdir('locale-gen.XXXXXXXXXX', 'DIR' => $dir);
-	if (! chdir $TEMPDIR) {
-		die "$PROGRAM: Can't chdir to '$TEMPDIR': $!\n";
+	my $tmpdir = tempdir('locale-gen.XXXXXXXXXX', 'DIR' => $dir);
+	if (! chdir $tmpdir) {
+		die "$PROGRAM: Can't chdir to '$tmpdir': $!\n";
+	} else {
+		return $tmpdir;
 	}
 }
 
