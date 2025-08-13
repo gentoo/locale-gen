@@ -18,13 +18,13 @@ language[_territory][.codeset][@modifier]
 .EE
 .RE
 .P
-A complete list of supported \fIlocalename\fR values can be obtained by reading the first column of the \fI/usr/share/i18n/SUPPORTED\fR file.
+A complete list of supported \fIlocalename\fR values can be obtained by reading the first column of the \fI/usr/share/i18n/SUPPORTED\fR file. Its values map directly to the names of files residing in the \fI/usr/share/i18n/locales\fR directory, provided that codeset parts are stripped.
 .P
 Assuming that a given locale is available, it can be effected by assigning its \fIlocalename\fR to the LANG environment variable.
 .SH "CHARACTER MAPS"
 A \fIcharmap\fR, also known as a character set or codeset, is a mapping of character symbols and collating element symbols to actual character encodings, allowing for computers to encode and decode text in a standard way.
 .P
-A complete list of supported \fIcharmap\fR values can be obtained by reading the second column of the \fI/usr/share/i18n/SUPPORTED\fR file.
+A complete list of supported \fIcharmap\fR values can be obtained by reading the second column of the \fI/usr/share/i18n/SUPPORTED\fR file. Its values map directly to the names of files residing in the \fI/usr/share/i18n/charmaps\fR directory, notwithstanding that the names may have a suffix as a consequence of having been compressed.
 .P
 Given that not all values of \fIlocalename\fR incorporate a codeset, the configuration file requires for the second field of each line to define a \fIcharmap\fR.
 .SH "EXAMPLES"
@@ -50,6 +50,12 @@ The default location of the configuration file.
 .TP
 .I /usr/share/i18n/SUPPORTED
 A list of supported \fIlocalename\fR and \fIcharmap\fR combinations.
+.TP
+.I /usr/share/i18n/locales
+Contains locale definition files that can serve as inputs to \fBlocaledef\fR(1).
+.TP
+.I /usr/share/i18n/charmaps
+Contains character map files that can serve as inputs to \fBlocaledef\fR(1).
 .SH "SEE ALSO"
 .BR locale (1),
 .BR localedef (1),
