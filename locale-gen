@@ -254,7 +254,7 @@ sub normalize ($canonical) {
 	if ($canonical !~ m/(?<=\.)[^@]+/p) {
 		die "Can't normalize " . render_printable($canonical);
 	} else {
-		# en_US.UTF-8            => en_US.utf8
+		# en_US.UTF-8 => en_US.utf8
 		# de_DE.ISO-8859-15@euro => de_DE.iso885915@euro
 		my $codeset = lc ${^MATCH} =~ tr/0-9A-Za-z//cdr;
 		return ${^PREMATCH} . $codeset . ${^POSTMATCH};
