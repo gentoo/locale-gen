@@ -231,7 +231,7 @@ sub show_version () {
 	print <<~EOF;
 	locale-gen $VERSION
 	Copyright 2024 Kerin Millar <kfm\@plushkava.net>
-	License GPL-2.0-only <https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html>
+	License GPL-2.0-only <https://spdx.org/licenses/GPL-2.0-only.html>
 	EOF
 }
 
