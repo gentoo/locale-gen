@@ -271,19 +271,20 @@ sub read_config ($prefix, @paths) {
 	# valid locale declarations that can be found among them, if any.
 	for my $i (keys @paths) {
 		my $path = $paths[$i];
+		my $fh;
 		try {
-			my $fh = fopen($path);
-			$! = 0;
-			if (my @locales = parse_config($fh, $path, \%locale_by, \%charmap_by)) {
-				return @locales;
-			}
+			$fh = fopen($path);
 		} catch ($e) {
-			# Disregard open errors concerning non-existent files
-			# unless there are no more paths to be tried. Validation
-			# errors shall also be propagated here.
-			if ($! != ENOENT || $i == $#paths) {
+			# Disregard open(2) errors concerning non-existent files
+			# unless there are no more paths to be tried.
+			if ($! == ENOENT && $i < $#paths) {
+				next;
+			} else {
 				die $e;
 			}
+		}
+		if (my @locales = parse_config($fh, $path, \%locale_by, \%charmap_by)) {
+			return @locales;
 		}
 	}
 
