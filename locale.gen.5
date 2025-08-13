@@ -20,7 +20,7 @@ language[_territory][.codeset][@modifier]
 .P
 A complete list of supported \fIlocalename\fR values can be obtained by reading the first column of the \fI/usr/share/i18n/SUPPORTED\fR file. Its values map directly to the names of files residing in the \fI/usr/share/i18n/locales\fR directory, provided that codeset parts are stripped.
 .P
-Assuming that a given locale is available, it can be effected by assigning its \fIlocalename\fR to the LANG environment variable.
+Assuming that a given locale is available, it can be effected by assigning its \fIlocalename\fR to the LANG environment variable, provided that a codeset part is incorporated.
 .SH "CHARACTER MAPS"
 A \fIcharmap\fR, also known as a character set or codeset, is a mapping of character symbols and collating element symbols to actual character encodings, allowing for computers to encode and decode text in a standard way.
 .P
