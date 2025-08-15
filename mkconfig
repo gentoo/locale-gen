@@ -10,7 +10,7 @@
 # License GPL-2.0-only <https://spdx.org/licenses/GPL-2.0-only.html>
 
 use v5.36;
-use File::Spec::Functions qw(catfile splitpath);
+use File::Spec::Functions qw(catfile);
 
 # Unset BASH_ENV for security reasons. Even as sh(1), bash acts upon it.
 delete $ENV{'BASH_ENV'};
@@ -62,7 +62,7 @@ sub map_locale_attributes ($prefix) {
 		iconv -f UTF-8 -t US-ASCII//TRANSLIT
 	};
 	my $regex = qr/
-		(\Q$top\E\/[^\/:]+)  # pathname
+		\Q$top\E\/([^\/:]+)  # basename
 		:                    # separates pathname from matching line
 		(language|territory) # attribute key
 		\h+                  # one or more <blank> characters
@@ -71,7 +71,7 @@ sub map_locale_attributes ($prefix) {
 	my %attr_by;
 	for my $line (@lines) {
 		if ($line =~ m/^${regex}$/) {
-			my ($locale, $key, $val) = (basename($1), $2, ucfirst $3);
+			my ($locale, $key, $val) = ($1, $2, ucfirst $3);
 			if ($key eq 'territory') {
 				if ($val =~ m/^Myanmar/) {
 					$val = 'Myanmar/Burma';
@@ -83,8 +83,4 @@ sub map_locale_attributes ($prefix) {
 		}
 	}
 	return \%attr_by;
-}
-
-sub basename ($path) {
-	return (splitpath($path))[-1];
 }
