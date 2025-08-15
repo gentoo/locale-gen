@@ -12,6 +12,9 @@
 use v5.36;
 use File::Spec::Functions qw(catfile splitpath);
 
+# Unset BASH_ENV for security reasons. Even as sh(1), bash acts upon it.
+delete $ENV{'BASH_ENV'};
+
 {
 	# The first argument shall be treated as a prefix, if any.
 	my $prefix = @ARGV ? $ARGV[0] : '';
