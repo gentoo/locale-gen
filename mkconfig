@@ -86,6 +86,8 @@ sub map_locale_attributes ($prefix) {
 			for ($territory) {
 				if (m/^Myanmar/) {
 					$_ = 'Myanmar/Burma';
+				} elsif (m/^Russian Federation\z/) {
+					$_ = 'Russia';
 				} elsif (m/^Turkiye\z/) {
 					$_ = 'Turkey';
 				}
