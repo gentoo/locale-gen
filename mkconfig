@@ -83,10 +83,12 @@ sub map_locale_attributes ($prefix) {
 					$ref->$* = to_ascii($ref->$*);
 				}
 			}
-			if ($territory =~ m/^Myanmar/) {
-				$territory = 'Myanmar/Burma';
-			} elsif ($territory eq 'Turkiye') {
-				$territory = 'Turkey';
+			for ($territory) {
+				if (m/^Myanmar/) {
+					$_ = 'Myanmar/Burma';
+				} elsif (m/^Turkiye\z/) {
+					$_ = 'Turkey';
+				}
 			}
 			$attr_by{$locale} = {
 				'language'  => $language,
