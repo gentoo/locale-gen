@@ -1,0 +1,87 @@
+#!/usr/bin/perl
+
+# Writes a sample /etc/locale.gen file to standard output as a columnated list,
+# consisting only of UTF-8 locales supported by the installed version of glibc,
+# with comments indicating the languages and territories in plain English.
+#
+# Requires: column(1), grep(1), iconv(1), sh(1)
+#
+# Copyright 2025 Kerin Millar <kfm@plushkava.net>
+# License GPL-2.0-only <https://spdx.org/licenses/GPL-2.0-only.html>
+
+use v5.36;
+use File::Spec::Functions qw(catfile splitpath);
+
+{
+	# The first argument shall be treated as a prefix, if any.
+	my $prefix = @ARGV ? $ARGV[0] : '';
+
+	# Open the file containing the supported locale/charmap combinations.
+	my $path = catfile($prefix, '/usr/share/i18n', 'SUPPORTED');
+	open my $fh, '<', $path or die "Can't open '$path': $!";
+
+	# Gather the language and territory attributes of the locale templates.
+	my $attr_by = map_locale_attributes($prefix);
+
+	# Use column(1) to write out a nicely columnated list.
+	open my $pipe, "| column -t -s \037" or exit 127;
+
+	while (my $line = readline $fh) {
+		my ($read_locale, $charmap) = split ' ', $line;
+
+		# The names of the templates don't incorporate a codeset part.
+		my $locale = $read_locale =~ s/\.[^@]+//r;
+
+		# Select only UTF-8 locales and refrain from incorporating the
+		# C.UTF-8 locale because is always compiled by locale-gen(8).
+		next if $charmap ne 'UTF-8' || $locale eq 'C';
+
+		# Compose a commented entry which also has a trailing comment,
+		# indicating the language and territory in plain English.
+		my ($comment, $territory) = $attr_by->{$locale}->@{'language', 'territory'};
+		if (! length $comment) {
+			die "Can't find a language attribute for '$read_locale'";
+		} else {
+			if (length $territory) {
+				$comment .= " ($territory)";
+			}
+			printf {$pipe} "# %s\037%s\037# %s\n", $read_locale, $charmap, $comment;
+		}
+	}
+	close $fh;
+	close $pipe or exit 1;
+}
+
+sub map_locale_attributes ($prefix) {
+	my $top = local $ENV{'TOP'} = catfile($prefix, '/usr/share/i18n', 'locales');
+	my @lines = qx{
+		grep -E '^(language|territory)[[:blank:]]' /dev/null "\$TOP"/* |
+		iconv -f UTF-8 -t US-ASCII//TRANSLIT
+	};
+	my $regex = qr/
+		(\Q$top\E\/[^\/:]+)  # pathname
+		:                    # separates pathname from matching line
+		(language|territory) # attribute key
+		\h+                  # one or more <blank> characters
+		"([^"]*)"            # attribute value
+	/x;
+	my %attr_by;
+	for my $line (@lines) {
+		if ($line =~ m/^${regex}$/) {
+			my ($locale, $key, $val) = (basename($1), $2, ucfirst $3);
+			if ($key eq 'territory') {
+				if ($val =~ m/^Myanmar/) {
+					$val = 'Myanmar/Burma';
+				} elsif ($val eq 'Turkiye') {
+					$val = 'Turkey';
+				}
+			}
+			$attr_by{$locale}{$key} = $val;
+		}
+	}
+	return \%attr_by;
+}
+
+sub basename ($path) {
+	return (splitpath($path))[-1];
+}
