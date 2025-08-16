@@ -31,14 +31,14 @@ Compile all locales that are officially supported by glibc.
 \fB\-c\fR, \fB\-\-config\fR \fIconfig\fR
 Read the given \fIconfig\fR file (defaults to /etc/locale.gen).
 .TP
-\fB\-d\fR, \fB\-\-prefix\fR \fIprefix\fR
-Treat most filesystem paths as being relative to the specified \fIprefix\fR (defaults to / if not a Gentoo Prefix system).
-.TP
 \fB\-h\fR, \fB\-\-help\fR
 Write out a synopsis and summary of the supported options then exit.
 .TP
 \fB\-j\fR, \fB\-\-jobs\fR \fIjobs\fR
 Spawn up to the specified number of \fIjobs\fR to compile locales in parallel (defaults to the number of logical processors).
+.TP
+\fB\-p\fR, \fB\-\-prefix\fR \fIprefix\fR
+Treat most filesystem paths as being relative to the specified \fIprefix\fR (defaults to / if not a Gentoo Prefix system).
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
 Suppress the writing of informational messages to standard output.
