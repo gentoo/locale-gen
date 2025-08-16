@@ -78,9 +78,9 @@ sub map_locale_attributes ($prefix) {
 		my $data = read_binary("$top/$locale");
 		if ($data =~ $regex) {
 			my ($language, $territory) = ($1, ucfirst $2);
-			for my $ref (\$language, \$territory) {
-				if ($ref->$* =~ m/[^\p{ASCII}]/) {
-					$ref->$* = to_ascii($ref->$*);
+			for ($language, $territory) {
+				if (m/[^\p{ASCII}]/) {
+					$_ = to_ascii($_);
 				}
 			}
 			for ($territory) {
