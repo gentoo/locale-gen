@@ -204,10 +204,12 @@ sub select_config_files ($prefix, %opt) {
 	return do {
 		if (exists $opt{'config'}) {
 			$opt{'config'};
-		} elsif (! $opt{'all'}) {
-			$path1, $path2;
-		} else {
+		} elsif ($opt{'all'}) {
 			$path2;
+		} elsif (exists $ENV{'LOCALEGEN_CONFIG'}) {
+			$ENV{'LOCALEGEN_CONFIG'};
+		} else {
+			$path1, $path2;
 		}
 	};
 }
