@@ -60,6 +60,10 @@ umask 0022;
 	my %opt = parse_opts($gentoo_prefix, @ARGV);
 	my $prefix = $opt{'prefix'} // $gentoo_prefix;
 
+	# Ensure that locale/charmap files are opened relative to the prefix.
+	# This is important in situations where the --prefix option is given.
+	$ENV{'I18NPATH'} = catdir($prefix, '/usr/share/i18n');
+
 	# For the directory to be unknown strongly implies the absence of glibc.
 	if (! defined $locale_dir) {
 		die "$PROGRAM: Aborting because the OS does not appear to use GNU libc\n";
