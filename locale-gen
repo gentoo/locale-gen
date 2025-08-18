@@ -424,7 +424,7 @@ sub generate_locales ($workers, @locales) {
 
 	my $total = scalar @locales;
 	$workers = min($workers, $total);
-	printf "Compiling %d locale definition file%s with %d worker%s ...\n",
+	printf "Compiling %d locale%s with %d worker%s ...\n",
 		$total, plural($total), $workers, plural($workers);
 
 	my $num_width = length $total;
