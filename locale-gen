@@ -290,7 +290,10 @@ sub read_config ($prefix, @paths) {
 				die $e;
 			}
 		}
-		if (my @locales = parse_config($fh, $path, \%locale_by, \%charmap_by)) {
+		my @locales = parse_config($fh, $path, \%locale_by, \%charmap_by);
+		if (my $count = scalar @locales) {
+			printf "Found %d locale declaration%s in %s.\n",
+				$count, plural($count), render_printable($path);
 			return @locales;
 		}
 	}
