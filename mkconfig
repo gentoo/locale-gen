@@ -26,10 +26,8 @@ use File::Slurper qw(read_text);
 	# Gather the language and territory attributes of the locale templates.
 	my $attr_by = map_locale_attributes($prefix);
 
-	# Use column(1) to write out a nicely columnated list. The encoding is
-	# applied as a precaution; should any wide characters unexpectedly slip
-	# through, they shall be backslash-escaped e.g. U+00E5 => "\x{00e5}".
-	open my $pipe, "|-:encoding(US-ASCII)", "column -t -s \037" or exit 127;
+	# Use column(1) to write out a nicely columnated list.
+	my $pipe = open_column("\037");
 
 	while (my $line = readline $fh) {
 		my ($read_locale, $charmap) = split ' ', $line;
@@ -106,4 +104,17 @@ sub to_ascii ($str) {
 	$str = NFKD($str);
 	$str =~ s/\p{NonspacingMark}//g;
 	return $str;
+}
+
+sub open_column ($sep) {
+	# Ensure that column(1) considers its input stream as US-ASCII.
+	local $ENV{'LC_ALL'} = 'C';
+
+	# The encoding is applied as a precaution; over-wide characters written
+	# to the pipe become Perl escape sequences e.g. U+00E5 => \x{00e5}.
+	if (! open my $pipe, '|-:encoding(US-ASCII)', 'column', '-ts', $sep) {
+		exit 127;
+	} else {
+		return $pipe;
+	}
 }
