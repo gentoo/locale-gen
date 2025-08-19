@@ -10,11 +10,10 @@
 # License GPL-2.0-only <https://spdx.org/licenses/GPL-2.0-only.html>
 
 use v5.36;
-use Encode qw(decode);
 use File::Spec::Functions qw(catdir catfile);
 use Unicode::Normalize qw(NFKD);
 
-use File::Slurper qw(read_binary);
+use File::Slurper qw(read_text);
 
 {
 	# The first argument shall be treated as a prefix, if any.
@@ -75,9 +74,9 @@ sub map_locale_attributes ($prefix) {
 	my %attr_by;
 	while (my $locale = readdir $dh) {
 		next if $locale =~ m/^\./;
-		my $data = read_binary("$top/$locale");
+		my $data = read_text("$top/$locale");
 		if ($data =~ $regex) {
-			my ($language, $territory) = ($1, $2);
+			my ($language, $territory) = ($1, ucfirst $2);
 			for ($language, $territory) {
 				if (m/[^\p{ASCII}]/) {
 					$_ = to_ascii($_);
@@ -94,18 +93,17 @@ sub map_locale_attributes ($prefix) {
 			}
 			$attr_by{$locale} = {
 				'language'  => $language,
-				'territory' => ucfirst $territory
+				'territory' => $territory
 			};
 		}
 	}
 	return \%attr_by;
 }
 
-sub to_ascii ($bytes) {
+sub to_ascii ($str) {
 	# This behaves similarly to "iconv -f UTF-8 -t US-ASCII//TRANSLIT". At
 	# least, to a degree that is sufficient for the inputs being processed.
-	my $chars = decode('UTF-8', $bytes, Encode::FB_CROAK);
-	$chars = NFKD($chars);
-	$chars =~ s/\p{NonspacingMark}//g;
-	return $chars;
+	$str = NFKD($str);
+	$str =~ s/\p{NonspacingMark}//g;
+	return $str;
 }
