@@ -549,10 +549,11 @@ sub generate_archive ($prefix, $gentoo_prefix, $locale_dir, $do_update, @canonic
 	}
 }
 
-sub run_localedef ($prefix, @args) {
-	# Incorporate the --prefix option, if requested.
-	if (length $prefix) {
-		unshift @args, '--prefix', $prefix;
+sub run_localedef ($archive_prefix, @args) {
+	# Incorporate the --prefix option, if requested. Its only effect is to
+	# cause localedef(1) to prepend the option-arg to the archive path.
+	if (length $archive_prefix) {
+		unshift @args, '--prefix', $archive_prefix;
 	}
 
 	# Prevent the --verbose option from being potentially implied.
