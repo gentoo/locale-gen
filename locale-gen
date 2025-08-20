@@ -109,7 +109,7 @@ umask 0022;
 	# If a non-actionable update was requested, proceed no further.
 	if (! @locales) {
 		print "All of the requested locales are presently installed.\n";
-		exit 0;
+		exit;
 	}
 
 	# A proxy check is justified because compilation may take a long time.
