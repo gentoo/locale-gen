@@ -323,7 +323,7 @@ sub get_valid_charmaps ($prefix) {
 	my $top = catdir($prefix, '/usr/share/i18n/charmaps');
 	if (! opendir my $dh, $top) {
 		die "$PROGRAM: Can't open '$top' for reading: $!\n";
-	} elsif (! (my @names = map +( -f "$top/$_" ? s/\.gz\z//r : () ), readdir $dh)) {
+	} elsif (! (my @names = map +( -f "$top/$_" ? s/\.(gz|bz2)\z//nr : () ), readdir $dh)) {
 		die "$PROGRAM: Failed to compose a list of valid character maps from '$top'\n";
 	} else {
 		return @names;
