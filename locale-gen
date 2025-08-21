@@ -14,7 +14,6 @@ use File::Spec::Functions qw(canonpath catfile catdir splitpath);
 use File::Temp qw(tempdir);
 use Getopt::Long ();
 use JSON::PP ();
-use List::Util qw(min);
 use POSIX qw(LC_ALL setlocale);
 
 # Formally stable as of v5.40; sufficiently functional in both v5.36 and v5.38.
@@ -424,7 +423,9 @@ sub generate_locales ($workers, @locales) {
 	local @SIG{'INT', 'TERM'} = ($handler, $handler);
 
 	my $total = scalar @locales;
-	$workers = min($workers, $total);
+	if ($total < $workers) {
+		$workers = $total;
+	}
 	printf "Compiling %d locale%s with %d worker%s ...\n",
 		$total, plural($total), $workers, plural($workers);
 
