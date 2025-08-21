@@ -601,8 +601,7 @@ sub redirect_stderr ($stderr, $callback) {
 }
 
 sub render_printable ($value) {
-	my $coder = JSON::PP->new->ascii->space_after;
-	return $coder->encode($value);
+	return JSON::PP->new->ascii->space_after->encode($value)
 }
 
 sub run ($cmd, @args) {
