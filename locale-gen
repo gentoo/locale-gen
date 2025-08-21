@@ -292,8 +292,8 @@ sub read_config ($prefix, @paths) {
 		}
 		my @locales = parse_config($fh, $path, \%locale_by, \%charmap_by);
 		if (my $count = scalar @locales) {
-			printf "Found %d locale declaration%s in %s.\n",
-				$count, plural($count), render_printable($path);
+			printf "Found %d locale declaration%s in '%s'.\n",
+				$count, plural($count), $path;
 			return @locales;
 		}
 	}
@@ -491,7 +491,7 @@ sub generate_archive ($prefix, $gentoo_prefix, $locale_dir, $do_update, @canonic
 
 	# Determine the eventual destination path of the archive.
 	my $final_path = catfile($prefix, $locale_dir, 'locale-archive');
-	printf "The location of the archive shall be %s.\n", render_printable($final_path);
+	print "The location of the archive shall be '$final_path'.\n";
 
 	# If --update was specified, make a copy of the existing archive.
 	if ($do_update && -e $final_path) {
@@ -616,9 +616,8 @@ sub throw_child_error ($cmd, $status = $?) {
 		# have printed a warning, no supplemental diagnostic is needed.
 		exit 1;
 	} elsif ($status != 0) {
-		my $printable_cmd = render_printable($cmd);
 		my $fate = ($status & 0x7F) ? 'interrupted by a signal' : 'unsuccessful';
-		die "$PROGRAM: Aborting because the execution of $printable_cmd was $fate\n";
+		die "$PROGRAM: Aborting because the execution of '$cmd' was $fate\n";
 	}
 }
 
