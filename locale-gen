@@ -333,7 +333,7 @@ sub parse_config ($fh, $path, $locale_by, $charmap_by) {
 	while (my $line = readline $fh) {
 		# Skip comments and blank lines. Note that \h will match only
 		# " " and "\t", since the input stream is not being decoded.
-		next if $line =~ m/^\h*($|#)/;
+		next if $line =~ m/^\h*($|#)/n;
 
 		# Permit comments trailing locale declarations.
 		$line =~ s/\h\K#\h.*//;
@@ -565,7 +565,7 @@ sub run_localedef ($archive_prefix, @args) {
 sub fopen ($path, $mode = '<') {
 	if (! open my $fh, $mode, $path) {
 		die "$PROGRAM: Can't open '$path': $!\n";
-	} elsif (! -f $fh && canonpath($path) !~ m/^\/dev\/(null|stdin)\z/) {
+	} elsif (! -f $fh && canonpath($path) !~ m/^\/dev\/(null|stdin)\z/n) {
 		die "$PROGRAM: Won't open '$path' because it is not a regular file\n";
 	} else {
 		return $fh;
