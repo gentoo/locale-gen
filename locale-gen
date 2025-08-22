@@ -112,7 +112,10 @@ umask 0022;
 	generate_locales($opt{'jobs'}, @locales);
 
 	# Integrate the newly compiled locales into the system's locale archive.
-	my $size = generate_archive($prefix, $gentoo_prefix, $locale_dir, $opt{'update'}, map +( $_->[2] ), @locales);
+	my $size = do {
+		my @canonicals = map +( $_->[2] ), @locales;
+		generate_archive($prefix, $gentoo_prefix, $locale_dir, $opt{'update'}, @canonicals);
+	};
 
 	my $total = scalar @locales + scalar %installed_by;
 	printf "Successfully installed an archive containing %d locale%s, of %s MiB in size.\n",
