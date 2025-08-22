@@ -54,10 +54,16 @@ Write out some details regarding the program then exit.
 Specifies the locales to be compiled.
 .TP
 .I /usr/share/i18n/SUPPORTED
-A list of officially supported locales.
+Specifies the officially supported locales.
 .TP
 .I /usr/lib/locale/locale\-archive
 Contains the currently installed locales.
+.TP
+.I /usr/share/i18n/locales
+Contains locale definition files that serve as inputs to \fBlocaledef\fR(1).
+.TP
+.I /usr/share/i18n/charmaps
+Contains character map files that serve as inputs to \fBlocaledef\fR(1).
 .SH "ENVIRONMENT"
 .TP
 LOCALEGEN_CONFIG
