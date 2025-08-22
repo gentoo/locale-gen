@@ -52,7 +52,7 @@ umask 0022;
 
 	# Ensure that locale/charmap files are opened relative to the prefix.
 	# It is especially important to do so in situations where the value of
-	# $prefix is something other than "" or "/".
+	# $prefix is neither <slash> nor an empty string.
 	$ENV{'I18NPATH'} = catdir($prefix, '/usr/share/i18n');
 
 	# For the directory to be unknown strongly implies the absence of glibc.
