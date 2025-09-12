@@ -10,9 +10,10 @@ use v5.36;
 use Cwd qw(getcwd);
 use Errno qw(ENOENT);
 use Fcntl qw(SEEK_SET);
-use File::Spec::Functions qw(canonpath catfile catdir splitpath);
+use File::Spec::Functions qw(canonpath catfile catdir path splitpath);
 use File::Temp qw(tempdir);
 use Getopt::Long ();
+use List::Util qw(any);
 
 # Formally stable as of v5.40; sufficiently functional in both v5.36 and v5.38.
 use experimental qw(try);
@@ -485,7 +486,8 @@ sub generate_archive ($prefix, $gentoo_prefix, $locale_dir, $do_update, @canonic
 	print "The location of the archive shall be '$final_path'.\n";
 
 	# If --update was specified, make a copy of the existing archive.
-	if ($do_update && -e $final_path) {
+	my $has_archive = -e $final_path;
+	if ($do_update && $has_archive) {
 		run('cp', '--', $final_path, "$output_dir/");
 	}
 
@@ -517,6 +519,9 @@ sub generate_archive ($prefix, $gentoo_prefix, $locale_dir, $do_update, @canonic
 		throw_child_error('localedef', 1 << 8);
 	}
 
+	# Determine whether the underlying filesystem supports SELinux labels.
+	my $has_seclabels = has_mount_option(dirname($final_path), 'seclabel');
+
 	# The process of replacing the old archive must not be interrupted.
 	local @SIG{'INT', 'TERM'} = ('IGNORE', 'IGNORE');
 
@@ -525,6 +530,11 @@ sub generate_archive ($prefix, $gentoo_prefix, $locale_dir, $do_update, @canonic
 	my $interim_path = "$final_path.$$";
 	run('mv', '--', catfile($output_dir, 'locale-archive'), $interim_path);
 
+	# If a prior archive exists, attempt to preserve its SELinux label.
+	if ($has_archive && $has_seclabels) {
+		run('chcon', "--reference=$final_path", '--', $interim_path);
+	}
+
 	# Atomically replace the old archive.
 	if (! rename $interim_path, $final_path) {
 		{
@@ -532,6 +542,11 @@ sub generate_archive ($prefix, $gentoo_prefix, $locale_dir, $do_update, @canonic
 			unlink $interim_path;
 		}
 		die "$PROGRAM: Can't rename '$interim_path' to '$final_path': $!\n";
+	}
+
+	# If no prior archive existed, restore the appropriate SELinux label.
+	if (! $has_archive && $has_seclabels && $prefix =~ m/^\/?\z/ && can_run('restorecon')) {
+		run('restorecon', '-Fmv', '--', $final_path);
 	}
 
 	# Return the size of the archive, in bytes.
@@ -631,6 +646,27 @@ sub round ($number) {
 
 sub basename ($path) {
 	return (splitpath($path))[2];
+}
+
+sub dirname ($path) {
+	return (splitpath($path))[1];
+}
+
+sub has_mount_option ($target, $option) {
+	if (! open my $pipe, '-|', qw( findmnt -no options -T ), $target) {
+		exit 1;
+	} else {
+		chomp(my $stdout = do { local $/; readline $pipe });
+		if (! close $pipe && $! == 0) {
+			throw_child_error('findmnt');
+		}
+		return ",$stdout," =~ m/\Q,$option,/;
+	}
+}
+
+sub can_run ($bin) {
+	my @paths = path();
+	return any(sub { -f $_ && -x _ }, map +( "$_/$bin" ), @paths);
 }
 
 END {
