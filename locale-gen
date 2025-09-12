@@ -19,7 +19,7 @@ use List::Util qw(any);
 use experimental qw(try);
 
 my $PROGRAM = basename(__FILE__);
-my $VERSION = '3.4';
+my $VERSION = '3.5';
 
 my $DEFERRED_SIGNAL = '';
 my $PID = $$;
