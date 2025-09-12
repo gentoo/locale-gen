@@ -24,14 +24,14 @@ The locale\-gen utility provides a means by which a system administrator may con
 .P
 A default installation of Gentoo Linux provides an archive that contains all supported locales, numbering 500 or more. However, it is typical for an administrator to require only one or two of these. In that case, the \fI/etc/locale.gen\fR configuration file may be populated with a list of the required locales. By default, locale\-gen shall read this file and compile only the locales that are specified, saving both time and space in the longer term.
 .P
-If the configuration file is missing, empty, or consists only of comments, locale\-gen shall act in one of two ways, depending on whether the \fB\-c\fR option or LOCALEGEN_CONFIG environment variable was specified. If neither was specified, locale\-gen shall act as if the \fB\-A\fR option had been specified. Otherwise, locale\-gen shall abort with a suitable diagnostic message.
+If the configuration file is missing, empty, or consists only of comments, locale\-gen shall act in one of two ways, depending on whether the \fB\-c\fR option or LOCALEGEN\_CONFIG environment variable was specified. If neither was specified, locale\-gen shall act as if the \fB\-A\fR option had been specified. Otherwise, locale\-gen shall abort with a suitable diagnostic message.
 .SH "OPTIONS"
 .TP
 \fB\-A\fR, \fB\-\-all\fR
 Compile all locales that are officially supported by glibc. Cannot be combined with the \fB-c\fR option.
 .TP
 \fB\-c\fR, \fB\-\-config\fR \fIconfig\fR
-Read the given \fIconfig\fR file (defaults to \fIprefix\fR/etc/locale.gen). The file may be specified as <hyphen-minus>, in which case locale\-gen shall read the configuration from standard input. If the LOCALEGEN_CONFIG variable is found to be set in the environment, and neither the \fB-A\fR nor \fB-c\fR option is specified, its value shall be taken as a literal \fIconfig\fR file path.
+Read the given \fIconfig\fR file (defaults to \fIprefix\fR/etc/locale.gen). The file may be specified as <hyphen-minus>, in which case locale\-gen shall read the configuration from standard input. If the LOCALEGEN\_CONFIG variable is found to be set in the environment, and neither the \fB-A\fR nor \fB-c\fR option is specified, its value shall be taken as a literal \fIconfig\fR file path.
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 Write out a synopsis and summary of the supported options then exit.
@@ -68,7 +68,7 @@ Contains locale definition files that serve as inputs to \fBlocaledef\fR(1).
 Contains character map files that serve as inputs to \fBlocaledef\fR(1).
 .SH "ENVIRONMENT"
 .TP
-LOCALEGEN_CONFIG
+LOCALEGEN\_CONFIG
 Defines the path of the \fIconfig\fR file in the absence of the \fB-A\fR and \fB-c\fR options.
 .SH "EXIT STATUS"
 The exit status shall be 0 under any of these conditions:
