@@ -17,10 +17,7 @@ use Getopt::Long ();
 # Formally stable as of v5.40; sufficiently functional in both v5.36 and v5.38.
 use experimental qw(try);
 
-# Determine the basename of the presently compiling script.
-my $PROGRAM;
-BEGIN { $PROGRAM = (splitpath(__FILE__))[-1]; }
-
+my $PROGRAM = basename(__FILE__);
 my $VERSION = '3.4';
 
 my $DEFERRED_SIGNAL = '';
@@ -309,7 +306,7 @@ sub get_valid_locales ($prefix) {
 		die "$PROGRAM: Can't chdir to '$pwd': $!\n";
 	} else {
 		chomp @paths;
-		return map +( (splitpath($_))[-1] ), @paths;
+		return map +basename($_), @paths;
 	}
 }
 
@@ -630,6 +627,10 @@ sub get_username () {
 sub round ($number) {
 	# Evaluation conveniently trims insignificant trailing zeroes.
 	return eval(sprintf '%.2f', $number);
+}
+
+sub basename ($path) {
+	return (splitpath($path))[2];
 }
 
 END {
