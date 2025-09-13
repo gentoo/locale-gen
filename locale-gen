@@ -487,7 +487,6 @@ sub compile_locale ($locale, $charmap, $canonical) {
 	run_localedef(undef, @args);
 }
 
-
 sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @canonicals) {
 	# Create the temporary subdir that will contain the new locale archive.
 	my $output_dir = catdir('.', $gentoo_prefix, $locale_dir);
