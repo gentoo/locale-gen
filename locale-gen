@@ -248,7 +248,11 @@ sub list_locales ($prefix) {
 	if (! defined(my $pid = open my $pipe, '-|')) {
 		die "Can't fork: $!";
 	} elsif ($pid == 0) {
-		run_localedef($prefix, '--list-archive');
+		my @args = ('--list-archive');
+		if (length $prefix) {
+			push @args, '--prefix', $prefix;
+		}
+		run_localedef(@args);
 	} else {
 		chomp(my @locales = readline $pipe);
 		if (-1 == waitpid($pid, 0) || $? != 0) {
@@ -483,8 +487,7 @@ sub generate_locales ($workers, @locales) {
 
 sub compile_locale ($locale, $charmap, $canonical) {
 	my $output_dir = "./$canonical";
-	my @args = ('--no-archive', '-i', $locale, '-f', $charmap, '--', $output_dir);
-	run_localedef(undef, @args);
+	run_localedef('--no-archive', '-i', $locale, '-f', $charmap, '--', $output_dir);
 }
 
 sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @canonicals) {
@@ -502,8 +505,7 @@ sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @canonicals) 
 	printf "Adding %d locale%s to the locale archive ...\n", $total, plural($total);
 	my $stderr = fopen('stderr.log', '+>');
 	redirect_stderr($stderr, sub {
-		my @args = ('--quiet', '--add-to-archive', '--replace', '--', @canonicals);
-		run_localedef('.', @args);
+		run_localedef(qw( --prefix . --quiet --add-to-archive --replace -- ), @canonicals);
 	});
 
 	# Propagate the diagnostics and errors raised by localedef(1), if any.
@@ -566,13 +568,7 @@ sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 	}
 }
 
-sub run_localedef ($archive_prefix, @args) {
-	# Incorporate the --prefix option, if requested. Its only effect is to
-	# cause localedef(1) to prepend the option-arg to the archive path.
-	if (length $archive_prefix) {
-		unshift @args, '--prefix', $archive_prefix;
-	}
-
+sub run_localedef (@args) {
 	# Prevent the --verbose option from being potentially implied.
 	delete local $ENV{'POSIXLY_CORRECT'};
 
