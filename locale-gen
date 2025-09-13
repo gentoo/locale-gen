@@ -23,7 +23,7 @@ my $VERSION = '3.5';
 
 my $DEFERRED_SIGNAL = '';
 my $PID = $$;
-my $TEMPDIR;
+my @TEMPFILES;
 
 # Unset BASH_ENV for security reasons. Even as sh(1), bash acts upon it.
 delete $ENV{'BASH_ENV'};
@@ -104,7 +104,7 @@ umask 0022;
 	check_archive_dir($prefix, $locale_dir);
 
 	# Create a temporary directory and switch to it.
-	$TEMPDIR = enter_tempdir($prefix);
+	push @TEMPFILES, enter_tempdir($prefix);
 
 	# Compile the selected locales.
 	generate_locales($opt{'jobs'}, @locales);
@@ -527,7 +527,7 @@ sub generate_archive ($prefix, $gentoo_prefix, $locale_dir, $do_update, @canonic
 
 	# Move the newly minted archive into the appropriate filesystem. Use
 	# mv(1), since there is a chance of crossing a filesystem boundary.
-	my $interim_path = "$final_path.$$";
+	push @TEMPFILES, my $interim_path = "$final_path.$$";
 	run('mv', '--', catfile($output_dir, 'locale-archive'), $interim_path);
 
 	# If a prior archive exists, attempt to preserve its SELinux label.
@@ -671,9 +671,9 @@ sub can_run ($bin) {
 
 END {
 	if ($$ == $PID) {
-		if (length $TEMPDIR) {
+		if (@TEMPFILES) {
 			local $?;
-			system 'rm', '-r', '--', $TEMPDIR;
+			system 'rm', '-rf', '--', @TEMPFILES;
 		}
 
 		# The default SIGINT and SIGTERM handlers are suppressed by
