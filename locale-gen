@@ -652,16 +652,15 @@ sub dirname ($path) {
 }
 
 sub has_mount_option ($target, $option) {
-	# Per bug 962817, / may not necessarily exist as a mountpoint. Assuming
-	# it does not, ignore the case that findmnt(8) exits with a status of 1.
-	local $ENV{'TARGET'} = $target;
-	my $stdout = qx{
-		findmnt -no options -T "\$TARGET"
-		case \$? in 1) ! mountpoint -q / ;; *) exit "\$?" ;; esac
-	};
-	throw_child_error('findmnt');
-	chomp $stdout;
-	return ",$stdout," =~ m/\Q,$option,/;
+	if (! open my $pipe, '-|', qw( findmnt -no options -T ), $target) {
+		exit 1;
+	} else {
+		chomp(my $stdout = do { local $/; readline $pipe });
+		if (! close $pipe && $! == 0) {
+			throw_child_error('findmnt');
+		}
+		return ",$stdout," =~ m/\Q,$option,/;
+	}
 }
 
 sub can_run ($bin) {
