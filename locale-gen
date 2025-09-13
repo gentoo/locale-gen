@@ -109,10 +109,21 @@ umask 0022;
 	# Compile the selected locales.
 	generate_locales($opt{'jobs'}, @locales);
 
-	# Integrate the newly compiled locales into the system's locale archive.
-	my $size = do {
+	# Determine the eventual destination path of the archive.
+	my $dst_path = catfile($prefix, $locale_dir, 'locale-archive');
+	print "The location of the archive shall be '$dst_path'.\n";
+
+	# Integrate the compiled locales into a new locale archive.
+	my $src_path = do {
+		my $prior_archive = $opt{'update'} ? $dst_path : '';
 		my @canonicals = map +( $_->[2] ), @locales;
-		generate_archive($prefix, $gentoo_prefix, $locale_dir, $opt{'update'}, @canonicals);
+		generate_archive($gentoo_prefix, $locale_dir, $prior_archive, @canonicals);
+	};
+
+	# Install the new locale archive.
+	my $size = do {
+		my $may_reset_labels = $prefix eq '' || $prefix eq '/';
+		install_archive($src_path, $dst_path, $may_reset_labels);
 	};
 
 	my $total = scalar @locales + scalar %installed_by;
@@ -476,19 +487,15 @@ sub compile_locale ($locale, $charmap, $canonical) {
 	run_localedef(undef, @args);
 }
 
-sub generate_archive ($prefix, $gentoo_prefix, $locale_dir, $do_update, @canonicals) {
+
+sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @canonicals) {
 	# Create the temporary subdir that will contain the new locale archive.
 	my $output_dir = catdir('.', $gentoo_prefix, $locale_dir);
 	run('mkdir', '-p', '--', $output_dir);
 
-	# Determine the eventual destination path of the archive.
-	my $final_path = catfile($prefix, $locale_dir, 'locale-archive');
-	print "The location of the archive shall be '$final_path'.\n";
-
-	# If --update was specified, make a copy of the existing archive.
-	my $has_archive = -e $final_path;
-	if ($do_update && $has_archive) {
-		run('cp', '--', $final_path, "$output_dir/");
+	# If specified, make a copy of the prior archive for updating.
+	if (-e $prior_archive) {
+		run('cp', '--', $prior_archive, "$output_dir/");
 	}
 
 	# Integrate all of the compiled locales into the new locale archive.
@@ -519,35 +526,42 @@ sub generate_archive ($prefix, $gentoo_prefix, $locale_dir, $do_update, @canonic
 		throw_child_error('localedef', 1 << 8);
 	}
 
-	# Determine whether the underlying filesystem supports SELinux labels.
-	my $has_seclabels = has_mount_option(dirname($final_path), 'seclabel');
+	return catfile($output_dir, 'locale-archive');
+}
 
-	# The process of replacing the old archive must not be interrupted.
+sub install_archive ($src_path, $dst_path, $may_reset_labels) {
+	# Determine whether the underlying filesystem supports SELinux labels.
+	my $has_seclabels = has_mount_option(dirname($dst_path), 'seclabel');
+
+	# Determine whether a previously installed archive exists.
+	my $has_archive = $has_seclabels && -e $dst_path;
+
+	# The process of replacing the prior archive must not be interrupted.
 	local @SIG{'INT', 'TERM'} = ('IGNORE', 'IGNORE');
 
-	# Move the newly minted archive into the appropriate filesystem. Use
-	# mv(1), since there is a chance of crossing a filesystem boundary.
-	push @TEMPFILES, my $interim_path = "$final_path.$$";
-	run('mv', '--', catfile($output_dir, 'locale-archive'), $interim_path);
+	# Move the new archive into the appropriate filesystem. Use mv(1),
+	# since there is a chance of crossing a filesystem boundary.
+	push @TEMPFILES, my $interim_path = "$dst_path.$$";
+	run('mv', '--', $src_path, $interim_path);
 
 	# If a prior archive exists, attempt to preserve its SELinux label.
-	if ($has_archive && $has_seclabels) {
-		run('chcon', "--reference=$final_path", '--', $interim_path);
+	if ($has_seclabels && $has_archive) {
+		run('chcon', "--reference=$dst_path", '--', $interim_path);
 	}
 
-	# Atomically replace the old archive.
-	if (! rename $interim_path, $final_path) {
-		die "$PROGRAM: Can't rename '$interim_path' to '$final_path': $!\n";
+	# Activate the new archive by atomically renaming it into place.
+	if (! rename $interim_path, $dst_path) {
+		die "$PROGRAM: Can't rename '$interim_path' to '$dst_path': $!\n";
 	}
 
 	# If no prior archive existed, restore the appropriate SELinux label.
-	if (! $has_archive && $has_seclabels && $prefix =~ m/^\/?\z/ && can_run('restorecon')) {
-		run('restorecon', '-Fmv', '--', $final_path);
+	if ($has_seclabels && ! $has_archive && $may_reset_labels && can_run('restorecon')) {
+		run('restorecon', '-Fmv', '--', $dst_path);
 	}
 
 	# Return the size of the archive, in bytes.
-	if (! (my @stat = stat $final_path)) {
-		die "$PROGRAM: Can't stat '$final_path': $!\n";
+	if (! (my @stat = stat $dst_path)) {
+		die "$PROGRAM: Can't stat '$dst_path': $!\n";
 	} else {
 		return $stat[7];
 	}
