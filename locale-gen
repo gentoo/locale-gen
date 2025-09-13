@@ -537,10 +537,6 @@ sub generate_archive ($prefix, $gentoo_prefix, $locale_dir, $do_update, @canonic
 
 	# Atomically replace the old archive.
 	if (! rename $interim_path, $final_path) {
-		{
-			local $!;
-			unlink $interim_path;
-		}
 		die "$PROGRAM: Can't rename '$interim_path' to '$final_path': $!\n";
 	}
 
