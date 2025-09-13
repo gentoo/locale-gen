@@ -505,7 +505,7 @@ sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @canonicals) 
 	printf "Adding %d locale%s to the locale archive ...\n", $total, plural($total);
 	my $stderr = fopen('stderr.log', '+>');
 	redirect_stderr($stderr, sub {
-		run_localedef(qw( --prefix . --quiet --add-to-archive --replace -- ), @canonicals);
+		run_localedef(qw( --prefix . --quiet --add-to-archive -- ), @canonicals);
 	});
 
 	# Propagate the diagnostics and errors raised by localedef(1), if any.
