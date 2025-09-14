@@ -9,7 +9,6 @@ use v5.36;
 
 use Cwd qw(getcwd);
 use Errno qw(ENOENT);
-use Fcntl qw(SEEK_SET);
 use File::Spec::Functions qw(canonpath catfile catdir path splitpath);
 use File::Temp qw(tempdir);
 use Getopt::Long ();
@@ -504,19 +503,20 @@ sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @canonicals) 
 	# Integrate all of the compiled locales into the new locale archive.
 	my $total = scalar @canonicals;
 	printf "Adding %d locale%s to the locale archive ...\n", $total, plural($total);
-	my $stderr = fopen('stderr.log', '+>');
-	redirect_stderr($stderr, sub {
+	my $stderr;
+	if (! defined(my $pid = open my $pipe, '-|')) {
+		die "Can't fork: $!";
+	} elsif ($pid == 0) {
+		open *STDERR, '>&=', *STDOUT or die "Can't direct STDERR to STDOUT: $!\n";
 		run(qw( localedef --prefix . --quiet --add-to-archive -- ), @canonicals);
-	});
-
-	# Propagate the diagnostics and errors raised by localedef(1), if any.
-	seek $stderr, 0, SEEK_SET;
-	my $i = 0;
-	while (my $line = readline $stderr) {
-		warn $line;
-		++$i;
+	} else {
+		local $/;
+		$stderr = readline $pipe;
+		if (length $stderr) {
+			warn $stderr;
+		}
+		close $pipe;
 	}
-	close $stderr;
 
 	# Check the status code first.
 	throw_child_error('localedef');
@@ -524,7 +524,7 @@ sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @canonicals) 
 	# Sadly, the exit status of GNU localedef(1) is nigh on useless in the
 	# case that the --add-to-archive option is provided. If anything was
 	# printed to STDERR at all, act as if the utility had exited 1.
-	if ($i > 0) {
+	if (length $stderr) {
 		throw_child_error('localedef', 1 << 8);
 	}
 
@@ -598,18 +598,6 @@ sub get_nprocs () {
 
 sub plural ($int) {
 	return $int == 1 ? '' : 's';
-}
-
-sub redirect_stderr ($stderr, $callback) {
-	if (! open my $old_stderr, '>&', *STDERR) {
-		die "Can't dup STDERR to a new file descriptor: $!";
-	} elsif (! open *STDERR, '>&', $stderr) {
-		my $fileno = fileno $stderr;
-		die "Can't dup file descriptor #$fileno to STDERR: $!";
-	} else {
-		$callback->();
-		open *STDERR, '>&=', $old_stderr;
-	}
 }
 
 sub render_printable ($value) {
