@@ -255,7 +255,7 @@ sub list_locales ($prefix) {
 		run('localedef', @args);
 	} else {
 		chomp(my @locales = readline $pipe);
-		if (-1 == waitpid($pid, 0) || $? != 0) {
+		if (! close $pipe && $! == 0) {
 			die "$PROGRAM: Can't obtain a list of the presently installed locales\n";
 		}
 		return @locales;
