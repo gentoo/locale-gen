@@ -548,7 +548,7 @@ sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 
 	# If a prior archive exists, attempt to preserve its SELinux label.
 	if ($has_seclabels && $has_archive) {
-		run('chcon', "--reference=$dst_path", '--', $interim_path);
+		copy_security_context($dst_path, $interim_path);
 	}
 
 	# Activate the new archive by atomically renaming it into place.
@@ -566,6 +566,18 @@ sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 		die "$PROGRAM: Can't stat '$dst_path': $!\n";
 	} else {
 		return $stat[7];
+	}
+}
+
+sub copy_security_context ($src_path, $dst_path) {
+	local @ENV{'SRC_PATH', 'DST_PATH'} = ($src_path, $dst_path);
+	my $stderr = qx{ LC_ALL=C chcon --reference="\$SRC_PATH" -- "\$DST_PATH" 2>&1 >/dev/null };
+	# Throw exceptions for any errors that are not a consequence of ENOTSUP.
+	if ($? != 0 && $stderr !~ m/: Operation not supported$/m) {
+		if (length $stderr) {
+			warn $stderr;
+		}
+		throw_child_error('chcon');
 	}
 }
 
