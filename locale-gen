@@ -470,9 +470,8 @@ sub generate_locales ($workers, @locales) {
 	}
 
 	# Abort if any of the collected status codes are found to be non-zero.
-	# In the case that one subprocess was interrupted by a signal while
-	# another exited non-zero, the resulting diagnostic shall allude to the
-	# signal. Such determinism is achieved by sorting the values.
+	# Should a subprocess be interrupted by a signal while another exited
+	# non-zero, the resulting diagnostic shall allude only to the signal.
 	for my $status (sort { $a <=> $b } values %status_by) {
 		throw_child_error('localedef', $status);
 	}
