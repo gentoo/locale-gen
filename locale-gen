@@ -581,8 +581,8 @@ sub copy_security_context ($src_path, $dst_path) {
 	}
 }
 
-sub fopen ($path, $mode = '<') {
-	if (! open my $fh, $mode, $path) {
+sub fopen ($path) {
+	if (! open my $fh, '<', $path) {
 		die "$PROGRAM: Can't open '$path': $!\n";
 	} elsif (! -f $fh && canonpath($path) !~ m/^\/dev\/(null|stdin)\z/n) {
 		die "$PROGRAM: Won't open '$path' because it is not a regular file\n";
