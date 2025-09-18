@@ -13,6 +13,7 @@ use File::Spec::Functions qw(canonpath catfile catdir path splitpath);
 use File::Temp qw(tempdir);
 use Getopt::Long ();
 use List::Util qw(any);
+use Term::ANSIColor qw(colored);
 
 # Formally stable as of v5.40; sufficiently functional in both v5.36 and v5.38.
 use experimental qw(try);
@@ -358,6 +359,31 @@ sub parse_config ($fh, $path, $locale_by, $charmap_by) {
 		chomp $line;
 		if (2 != (@fields = split /\h+/, trim_line($line), 3)) {
 			$thrower->('Malformed locale declaration', $line);
+		}
+
+		# Handle "UTF8" as a special case. Though glibc tolerates it,
+		# locale-gen would otherwise not because there is no charmap
+		# file by that name. The intention is to encourage users to
+		# amend their config files before eventually dropping support
+		# for "UTF8" altogether.
+		my @warnings;
+		if ($fields[0] =~ s/\.UTF\K8(?=@|\z)/-8/) {
+			push @warnings,
+				sprintf "WARNING! Codeset specified as UTF8 (should be UTF-8) at %s[%d]: %s",
+					$path, $., render_printable($line);
+		}
+		if ($fields[1] =~ s/^UTF8\z/UTF-8/) {
+			push @warnings,
+				sprintf "WARNING! Charmap specified as UTF8 (should be UTF-8) at %s[%d]: %s",
+					$path, $., render_printable($line);
+		}
+		for my $warning (@warnings) {
+			if (-t 2) {
+				*STDOUT->flush;
+				warn colored($warning, 'bold yellow') . "\n";
+			} else {
+				warn "$warning\n";
+			}
 		}
 
 		# Extract the specified locale and character map. Upon success,
