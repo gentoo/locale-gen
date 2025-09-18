@@ -115,7 +115,7 @@ umask 0022;
 
 	# Integrate the compiled locales into a new locale archive.
 	my $src_path = do {
-		my $prior_archive = $opt{'update'} ? $dst_path : '';
+		my $prior_archive = $opt{'update'} ? $dst_path : undef;
 		my @canonicals = map +( $_->[2] ), @locales;
 		generate_archive($gentoo_prefix, $locale_dir, $prior_archive, @canonicals);
 	};
@@ -495,7 +495,7 @@ sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @canonicals) 
 	run('mkdir', '-p', '--', $output_dir);
 
 	# If specified, make a copy of the prior archive for updating.
-	if (-e $prior_archive) {
+	if (length $prior_archive && -e $prior_archive) {
 		run('cp', '--', $prior_archive, "$output_dir/");
 	}
 
