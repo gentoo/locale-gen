@@ -690,8 +690,7 @@ sub has_mount_option ($target, $option) {
 }
 
 sub can_run ($bin) {
-	my @paths = path();
-	return any(sub { -f $_ && -x _ }, map +( "$_/$bin" ), @paths);
+	return any(sub { -f "$_/$bin" && -x _ }, path());
 }
 
 END {
