@@ -7,7 +7,6 @@
 
 use v5.36;
 
-use Cwd qw(getcwd);
 use Errno qw(ENOENT);
 use File::Spec::Functions qw(canonpath catfile catdir path splitpath);
 use File::Temp qw(tempdir);
@@ -276,11 +275,7 @@ sub normalize ($canonical) {
 }
 
 sub read_config ($prefix, @paths) {
-	# Compose a dictionary of locale names known to be valid.
-	my %locale_by = map +( $_ => 1 ), get_valid_locales($prefix);
-
-	# Compose a dictionary of character maps known to be valid.
-	my %charmap_by = map +( $_ => 1 ), get_valid_charmaps($prefix);
+	my $supported_by = map_supported_combinations($prefix);
 
 	# Iterate over the given paths and return the first non-empty list of
 	# valid locale declarations that can be found among them, if any.
@@ -298,7 +293,7 @@ sub read_config ($prefix, @paths) {
 				die $e;
 			}
 		}
-		my @locales = parse_config($fh, $path, \%locale_by, \%charmap_by);
+		my @locales = parse_config($fh, $path, $supported_by);
 		if (my $count = scalar @locales) {
 			printf "Found %d locale declaration%s in '%s'.\n",
 				$count, plural($count), $path;
@@ -311,34 +306,21 @@ sub read_config ($prefix, @paths) {
 	die "$PROGRAM: No locale declarations were found within $path_list\n";
 }
 
-sub get_valid_locales ($prefix) {
-	my $cmd = qq{ find . ! -path . -prune ! -path '*\n*' -type f -exec grep -lxF LC_IDENTIFICATION {} + };
-	my $top = catdir($prefix, '/usr/share/i18n/locales');
-	my $pwd = getcwd();
-	if (! chdir $top) {
-		die "$PROGRAM: Can't chdir to '$top': $!\n";
-	} elsif (! (my @paths = readpipe $cmd) || $? != 0) {
-		die "$PROGRAM: Failed to compose a list of valid locale names from '$top'\n";
-	} elsif (defined $pwd && ! chdir $pwd) {
-		die "$PROGRAM: Can't chdir to '$pwd': $!\n";
-	} else {
-		chomp @paths;
-		return map +basename($_), @paths;
+sub map_supported_combinations ($prefix) {
+	my $path = catfile($prefix, '/usr/share/i18n', 'SUPPORTED');
+	my $fh = fopen($path);
+	my %supported_by;
+	while (my $line = readline $fh) {
+		chomp $line;
+		if (2 == (my ($locale, $charmap) = split ' ', $line)) {
+			$supported_by{$locale}{$charmap} = 1;
+			$supported_by{''}{$charmap} = 1;
+		}
 	}
+	return \%supported_by;
 }
 
-sub get_valid_charmaps ($prefix) {
-	my $top = catdir($prefix, '/usr/share/i18n/charmaps');
-	if (! opendir my $dh, $top) {
-		die "$PROGRAM: Can't open '$top' for reading: $!\n";
-	} elsif (! (my @names = map +( -f "$top/$_" ? s/\.(gz|bz2)\z//nr : () ), readdir $dh)) {
-		die "$PROGRAM: Failed to compose a list of valid character maps from '$top'\n";
-	} else {
-		return @names;
-	}
-}
-
-sub parse_config ($fh, $path, $locale_by, $charmap_by) {
+sub parse_config ($fh, $path, $supported_by) {
 	# Set up a helper routine to throw for validation errors.
 	my $thrower = sub ($error, $line) {
 		die sprintf "%s: %s at %s[%d]: %s\n",
@@ -386,20 +368,22 @@ sub parse_config ($fh, $path, $locale_by, $charmap_by) {
 			}
 		}
 
-		# Extract the specified locale and character map. Upon success,
-		# a canonicalised representation of the locale is also returned.
-		my ($locale, $codeset, $charmap, $canonical) = parse_entry(@fields);
-
 		# Validate both locale and character map before accepting.
-		if (! $locale_by->{$locale}) {
+		my ($locale, $charmap) = @fields;
+		if (! $supported_by->{$locale}) {
 			$thrower->('Invalid locale', $line);
-		} elsif (defined $codeset && $codeset ne $charmap) {
-			$thrower->('Mismatching codeset/charmap', $line);
-		} elsif (! $charmap_by->{$charmap}) {
+		} elsif (! $supported_by->{''}{$charmap}) {
 			$thrower->('Invalid charmap', $line);
-		} else {
-			push @locales, [ $locale, $charmap, $canonical ];
+		} elsif (! $supported_by->{$locale}{$charmap}) {
+			$thrower->('Unsupported locale/charmap combination', $line);
 		}
+
+		# Determine the locale name in both the form that accords with
+		# the subdirectories of /usr/share/i18n/locales, and in the
+		# canonical form that incorporates the <codeset> part.
+		($locale, my $canonical) = parse_entry($locale, $charmap);
+
+		push @locales, [ $locale, $charmap, $canonical ];
 	}
 
 	return @locales;
@@ -407,19 +391,18 @@ sub parse_config ($fh, $path, $locale_by, $charmap_by) {
 
 sub parse_entry ($locale, $charmap) {
 	my $canonical;
-	my $codeset;
 	if (2 == (my @fields = split /@/, $locale, 3)) {
 		# de_DE@euro ISO-8859-15 => de_DE.ISO-8859-15@euro
 		$canonical = sprintf '%s.%s@%s', $fields[0], $charmap, $fields[1];
 	} elsif (2 == (@fields = split /\./, $locale, 3)) {
 		# en_US.UTF-8 UTF-8 => en_US.UTF-8
-		($locale, $codeset) = @fields;
-		$canonical = "$locale.$codeset";
+		$locale = $fields[0];
+		$canonical = "$locale.$charmap";
 	} elsif (1 == @fields) {
 		# en_US ISO-8859-1 => en_US.ISO-8859-1
 		$canonical = "$locale.$charmap";
 	}
-	return $locale, $codeset, $charmap, $canonical;
+	return $locale, $canonical;
 }
 
 sub check_archive_dir ($prefix, $locale_dir) {
