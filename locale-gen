@@ -64,7 +64,7 @@ umask 0022;
 	}
 
 	# Ensure that the C.UTF-8 locale is made available.
-	my @locales = ([ 'C', 'UTF-8', 'C.UTF-8' ]);
+	my @locales = ([ 'C', 'UTF-8', 'C.UTF-8', 'C.UTF-8' ]);
 
 	# Compose a list of up to two configuration files to be read.
 	my @config_files = select_config_files($prefix, %opt);
@@ -116,8 +116,8 @@ umask 0022;
 	# Integrate the compiled locales into a new locale archive.
 	my $src_path = do {
 		my $prior_archive = $opt{'update'} ? $dst_path : undef;
-		my @canonicals = map +( $_->[2] ), @locales;
-		generate_archive($gentoo_prefix, $locale_dir, $prior_archive, @canonicals);
+		my @names = map +( $_->[3] ), @locales;
+		generate_archive($gentoo_prefix, $locale_dir, $prior_archive, @names);
 	};
 
 	# Install the new locale archive.
@@ -381,9 +381,9 @@ sub parse_config ($fh, $path, $supported_by) {
 		# Determine the locale name in both the form that accords with
 		# the subdirectories of /usr/share/i18n/locales, and in the
 		# canonical form that incorporates the <codeset> part.
-		($locale, my $canonical) = parse_entry($locale, $charmap);
+		($locale, my $canonical, my $name) = parse_entry($locale, $charmap);
 
-		push @locales, [ $locale, $charmap, $canonical ];
+		push @locales, [ $locale, $charmap, $canonical, $name ];
 	}
 
 	return @locales;
@@ -391,6 +391,7 @@ sub parse_config ($fh, $path, $supported_by) {
 
 sub parse_entry ($locale, $charmap) {
 	my $canonical;
+	my $name;
 	if (2 == (my @fields = split /@/, $locale, 3)) {
 		# de_DE@euro ISO-8859-15 => de_DE.ISO-8859-15@euro
 		$canonical = sprintf '%s.%s@%s', $fields[0], $charmap, $fields[1];
@@ -401,8 +402,18 @@ sub parse_entry ($locale, $charmap) {
 	} elsif (1 == @fields) {
 		# en_US ISO-8859-1 => en_US.ISO-8859-1
 		$canonical = "$locale.$charmap";
+
+		# Where given an input path whose name does not incorporate a
+		# charmap, localedef(1) will incorporate it into the archive as
+		# an alias of its canonical name. For example, "en_US" may be
+		# rendered a valid name that is equivalent to "en_US.iso88591".
+		# It is strongly discouraged to rely on these in any capacity.
+		# Still, for the time being, arrange for them to exist.
+		if ($locale ne 'C') {
+			$name = $locale;
+		}
 	}
-	return $locale, $canonical;
+	return $locale, $canonical, $name // $canonical;
 }
 
 sub check_archive_dir ($prefix, $locale_dir) {
@@ -454,7 +465,7 @@ sub generate_locales ($workers, @locales) {
 			last if 0 != ($status_by{$pid} = $?);
 		}
 
-		my ($locale, $charmap, $canonical) = $locales[$i]->@*;
+		my ($locale, $charmap, $canonical, $name) = $locales[$i]->@*;
 		printf "[%*d/%d] Compiling locale: %s\n",
 			$num_width, $i + 1, $total, $canonical;
 
@@ -464,7 +475,7 @@ sub generate_locales ($workers, @locales) {
 			last;
 		} elsif ($pid == 0) {
 			@SIG{'INT', 'TERM'} = ('DEFAULT', 'DEFAULT');
-			compile_locale($locale, $charmap, $canonical);
+			compile_locale($locale, $charmap, $name);
 		}
 	} continue {
 		last if $DEFERRED_SIGNAL;
@@ -493,8 +504,8 @@ sub generate_locales ($workers, @locales) {
 	}
 }
 
-sub compile_locale ($locale, $charmap, $canonical) {
-	my $output_dir = "./$canonical";
+sub compile_locale ($locale, $charmap, $name) {
+	my $output_dir = "./$name";
 	run('localedef', '--no-archive', '-i', $locale, '-f', $charmap, '--', $output_dir);
 }
 
