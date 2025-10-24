@@ -466,12 +466,12 @@ sub generate_locales ($workers, @locales) {
 		}
 
 		my ($locale, $charmap, $canonical, $name) = $locales[$i]->@*;
-		printf '[%*d/%d] Compiling locale: %s',
-			$num_width, $i + 1, $total, $canonical;
-		if ($name ne $canonical) {
-			print " ($name)";
-		}
-		print "\n";
+		printf "[%*d/%d] Compiling locale: %s%s\n",
+			$num_width,
+			$i + 1,
+			$total,
+			$canonical,
+			$name eq $canonical ? '' : " ($name)";
 
 		# Fork and execute localedef(1) for locale compilation.
 		if (! defined(my $pid = fork)) {
