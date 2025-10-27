@@ -354,7 +354,7 @@ sub parse_config ($fh, $path, $supported_by) {
 				sprintf "WARNING! Codeset specified as UTF8 (should be UTF-8) at %s[%d]: %s",
 					$path, $., render_printable($line);
 		}
-		if ($charmap =~ s/^UTF8\z/UTF-8/) {
+		if ($charmap =~ s/^UTF\K8\z/-8/) {
 			push @warnings,
 				sprintf "WARNING! Charmap specified as UTF8 (should be UTF-8) at %s[%d]: %s",
 					$path, $., render_printable($line);
