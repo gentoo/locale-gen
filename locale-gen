@@ -337,9 +337,9 @@ sub parse_config ($fh, $path, $supported_by) {
 		$line =~ s/\h\K#\h.*//;
 
 		# Expect for two fields, separated by horizontal whitespace.
-		my @fields;
+		my ($locale, $charmap);
 		chomp $line;
-		if (2 != (@fields = split /\h+/, trim_line($line), 3)) {
+		if (2 != (($locale, $charmap) = split /\h+/, trim_line($line))) {
 			$thrower->('Malformed locale declaration', $line);
 		}
 
@@ -349,12 +349,12 @@ sub parse_config ($fh, $path, $supported_by) {
 		# amend their config files before eventually dropping support
 		# for "UTF8" altogether.
 		my @warnings;
-		if ($fields[0] =~ s/\.UTF\K8(?=@|\z)/-8/) {
+		if ($locale =~ s/\.UTF\K8(?=@|\z)/-8/) {
 			push @warnings,
 				sprintf "WARNING! Codeset specified as UTF8 (should be UTF-8) at %s[%d]: %s",
 					$path, $., render_printable($line);
 		}
-		if ($fields[1] =~ s/^UTF8\z/UTF-8/) {
+		if ($charmap =~ s/^UTF8\z/UTF-8/) {
 			push @warnings,
 				sprintf "WARNING! Charmap specified as UTF8 (should be UTF-8) at %s[%d]: %s",
 					$path, $., render_printable($line);
@@ -369,7 +369,6 @@ sub parse_config ($fh, $path, $supported_by) {
 		}
 
 		# Validate both locale and character map before accepting.
-		my ($locale, $charmap) = @fields;
 		if (! $supported_by->{$locale}) {
 			$thrower->('Invalid locale', $line);
 		} elsif (! $supported_by->{''}{$charmap}) {
