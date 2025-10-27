@@ -351,21 +351,16 @@ sub parse_config ($fh, $path, $supported_by) {
 		my @warnings;
 		if ($locale =~ s/\.UTF\K8(?=@|\z)/-8/) {
 			push @warnings,
-				sprintf "WARNING! Codeset specified as UTF8 (should be UTF-8) at %s[%d]: %s",
+				sprintf "Codeset specified as UTF8 (should be UTF-8) at %s[%d]: %s",
 					$path, $., render_printable($line);
 		}
 		if ($charmap =~ s/^UTF\K8\z/-8/) {
 			push @warnings,
-				sprintf "WARNING! Charmap specified as UTF8 (should be UTF-8) at %s[%d]: %s",
+				sprintf "Charmap specified as UTF8 (should be UTF-8) at %s[%d]: %s",
 					$path, $., render_printable($line);
 		}
 		for my $warning (@warnings) {
-			if (-t 2) {
-				*STDOUT->flush;
-				warn colored($warning, 'bold yellow') . "\n";
-			} else {
-				warn "$warning\n";
-			}
+			print_warning("WARNING! $warning\n");
 		}
 
 		# Validate both locale and character map before accepting.
@@ -688,6 +683,15 @@ sub has_mount_option ($target, $option) {
 
 sub can_run ($bin) {
 	return any(sub { -f "$_/$bin" && -x _ }, path());
+}
+
+sub print_warning ($warning) {
+	if (-t 2) {
+		*STDOUT->flush;
+		print STDERR colored($warning, 'bold yellow');
+	} else {
+		print STDERR $warning;
+	}
 }
 
 END {
