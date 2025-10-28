@@ -124,7 +124,7 @@ umask 0022;
 	};
 
 	# Install the new locale archive.
-	my $is_prefixed = $prefix ne '' && $prefix ne '/';
+	my $is_prefixed = length $prefix && ! is_eq_file($prefix, '/');
 	my $size = install_archive($src_path, $dst_path, ! $is_prefixed);
 
 	my $total = scalar @locales + scalar %installed_by;
@@ -715,6 +715,12 @@ sub print_warning ($warning) {
 	} else {
 		print STDERR $warning;
 	}
+}
+
+sub is_eq_file ($path1, $path2) {
+	# The -ef primary is standard as of POSIX.1-2024.
+	local @ENV{'PATH1', 'PATH2'} = ($path1, $path2);
+	return 0 == system q{ test "$PATH1" -ef "$PATH2" };
 }
 
 END {
