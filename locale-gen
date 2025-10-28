@@ -597,7 +597,15 @@ sub check_effective_locale ($supported_by) {
 		return;
 	} elsif (exists $supported_by->{$locale}) {
 		print_warning("WARNING! An ambiguous locale is currently in effect: $locale\n");
-		print_warning("It is strongly recommended to choose another with eselect(1) or localectl(1).\n");
+		my $utility;
+		if (-d '/run/systemd') {
+			$utility = 'localectl';
+		} elsif (-d '/run/openrc') {
+			$utility = 'eselect';
+		}
+		if (defined $utility) {
+			print_warning("It is strongly recommended to choose another with the ${utility}(1) utility.\n");
+		}
 	}
 }
 
