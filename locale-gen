@@ -406,9 +406,7 @@ sub parse_entry ($locale, $charmap) {
 		# an alias of its canonical name. For example, "en_US" may refer
 		# to "en_US.iso88591". It is strongly discouraged to rely on
 		# this behaviour. Still, for now, ensure that the aliases exist.
-		if ($locale ne 'C') {
-			$name = $locale;
-		}
+		$name = $locale;
 	}
 	return $locale, $canonical, $name // $canonical;
 }
