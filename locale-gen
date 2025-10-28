@@ -11,7 +11,7 @@ use Errno qw(ENOENT);
 use File::Spec::Functions qw(canonpath catfile catdir path splitpath);
 use File::Temp qw(tempdir);
 use Getopt::Long ();
-use List::Util qw(any);
+use List::Util qw(any first);
 use Term::ANSIColor qw(colored);
 
 # Formally stable as of v5.40; sufficiently functional in both v5.36 and v5.38.
@@ -69,8 +69,11 @@ umask 0022;
 	# Compose a list of up to two configuration files to be read.
 	my @config_files = select_config_files($prefix, %opt);
 
+	# Compose a dictionary of supported locale/charmap combinations.
+	my $supported_by = map_supported_combinations($prefix);
+
 	# Collect the locales that are being requested for installation.
-	push @locales, read_config($prefix, @config_files);
+	push @locales, read_config($prefix, $supported_by, @config_files);
 
 	# Compose a dictionary of installed locales for the --update option.
 	my %installed_by;
@@ -129,6 +132,9 @@ umask 0022;
 	my $total = scalar @locales + scalar %installed_by;
 	printf "Successfully installed an archive containing %d locale%s, of %s MiB in size.\n",
 		$total, plural($total), round($size / 2 ** 20);
+
+	# Issue a warning if the effective locale does not specify a charmap.
+	check_effective_locale($supported_by);
 }
 
 sub get_locale_dir () {
@@ -274,9 +280,7 @@ sub normalize ($canonical) {
 	}
 }
 
-sub read_config ($prefix, @paths) {
-	my $supported_by = map_supported_combinations($prefix);
-
+sub read_config ($prefix, $supported_by, @paths) {
 	# Iterate over the given paths and return the first non-empty list of
 	# valid locale declarations that can be found among them, if any.
 	for my $i (keys @paths) {
@@ -583,6 +587,17 @@ sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 		die "$PROGRAM: Can't stat '$dst_path': $!\n";
 	} else {
 		return $stat[7];
+	}
+}
+
+sub check_effective_locale ($supported_by) {
+	my $locale = first(sub { length $_ }, @ENV{'LC_ALL', 'LANG'});
+	if (! defined $locale || $locale =~ m/\./) {
+		# No locale is effective, or that which is specifies a codeset.
+		return;
+	} elsif (exists $supported_by->{$locale}) {
+		print_warning("WARNING! An ambiguous locale is currently in effect: $locale\n");
+		print_warning("It is strongly recommended to choose another with eselect(1) or localectl(1).\n");
 	}
 }
 
