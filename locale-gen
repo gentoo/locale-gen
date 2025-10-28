@@ -124,17 +124,17 @@ umask 0022;
 	};
 
 	# Install the new locale archive.
-	my $size = do {
-		my $may_reset_labels = $prefix eq '' || $prefix eq '/';
-		install_archive($src_path, $dst_path, $may_reset_labels);
-	};
+	my $is_prefixed = $prefix ne '' && $prefix ne '/';
+	my $size = install_archive($src_path, $dst_path, ! $is_prefixed);
 
 	my $total = scalar @locales + scalar %installed_by;
 	printf "Successfully installed an archive containing %d locale%s, of %s MiB in size.\n",
 		$total, plural($total), round($size / 2 ** 20);
 
 	# Issue a warning if the effective locale does not specify a charmap.
-	check_effective_locale($supported_by);
+	if (! $is_prefixed) {
+		check_effective_locale($supported_by);
+	}
 }
 
 sub get_locale_dir () {
