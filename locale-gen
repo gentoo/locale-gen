@@ -403,10 +403,9 @@ sub parse_entry ($locale, $charmap) {
 
 		# Where given an input path whose name does not incorporate a
 		# charmap, localedef(1) will incorporate it into the archive as
-		# an alias of its canonical name. For example, "en_US" may be
-		# rendered a valid name that is equivalent to "en_US.iso88591".
-		# It is strongly discouraged to rely on these in any capacity.
-		# Still, for the time being, arrange for them to exist.
+		# an alias of its canonical name. For example, "en_US" may refer
+		# to "en_US.iso88591". It is strongly discouraged to rely on
+		# this behaviour. Still, for now, ensure that the aliases exist.
 		if ($locale ne 'C') {
 			$name = $locale;
 		}
