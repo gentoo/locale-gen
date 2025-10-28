@@ -511,7 +511,7 @@ sub compile_locale ($locale, $charmap, $name) {
 	run('localedef', '--no-archive', '-i', $locale, '-f', $charmap, '--', $output_dir);
 }
 
-sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @canonicals) {
+sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @names) {
 	# Create the temporary subdir that will contain the new locale archive.
 	my $output_dir = catdir('.', $gentoo_prefix, $locale_dir);
 	run('mkdir', '-p', '--', $output_dir);
@@ -522,14 +522,14 @@ sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @canonicals) 
 	}
 
 	# Integrate all of the compiled locales into the new locale archive.
-	my $total = scalar @canonicals;
+	my $total = scalar @names;
 	printf "Adding %d locale%s to the locale archive ...\n", $total, plural($total);
 	my $stderr;
 	if (! defined(my $pid = open my $pipe, '-|')) {
 		die "Can't fork: $!";
 	} elsif ($pid == 0) {
 		open *STDERR, '>&=', *STDOUT or die "Can't direct STDERR to STDOUT: $!\n";
-		run(qw( localedef --prefix . --quiet --add-to-archive -- ), @canonicals);
+		run(qw( localedef --prefix . --quiet --add-to-archive -- ), @names);
 	} else {
 		local $/;
 		$stderr = readline $pipe;
