@@ -257,11 +257,7 @@ sub list_locales ($prefix) {
 	if (! defined(my $pid = open my $pipe, '-|')) {
 		die "Can't fork: $!";
 	} elsif ($pid == 0) {
-		my @args = ('--list-archive');
-		if (length $prefix) {
-			push @args, '--prefix', $prefix;
-		}
-		run('localedef', @args);
+		run('localedef', '--list-archive', '--prefix', $prefix);
 	} else {
 		chomp(my @locales = readline $pipe);
 		if (! close $pipe && $! == 0) {
