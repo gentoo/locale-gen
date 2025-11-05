@@ -20,8 +20,7 @@ use File::Slurper qw(read_lines read_text);
 	my $prefix = @ARGV ? $ARGV[0] : '';
 
 	# Read the file containing the supported locale/charmap combinations.
-	my $path = catfile($prefix, '/usr/share/i18n', 'SUPPORTED');
-	my @lines = read_lines($path);
+	my @lines = read_lines(catfile($prefix, '/usr/share/i18n', 'SUPPORTED'));
 
 	# Gather the language and territory attributes of the locale templates.
 	my $attr_by = map_locale_attributes($prefix);
@@ -41,14 +40,16 @@ use File::Slurper qw(read_lines read_text);
 
 		# Compose a commented entry which also has a trailing comment,
 		# indicating the language and territory in plain English.
-		my ($comment, $territory) = $attr_by->{$locale}->@{'language', 'territory'};
-		if (! length $comment) {
-			die "Can't find a language attribute for '$read_locale'";
-		} else {
+		if (exists $attr_by->{$locale}) {
+			my ($comment, $territory) = $attr_by->{$locale}->@{'language', 'territory'};
 			if (length $territory) {
 				$comment .= " ($territory)";
 			}
 			printf {$pipe} "# %s\037%s\037# %s\n", $read_locale, $charmap, $comment;
+		} elsif (-e (my $path = catfile($prefix, '/usr/share/i18n/locales', $locale))) {
+			die "mkconfig: Aborting because no language attribute was found in '$path'\n";
+		} else {
+			die "mkconfig: Aborting because the '$path' file is missing\n";
 		}
 	}
 	close $pipe or exit 1;
