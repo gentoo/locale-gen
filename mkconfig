@@ -13,7 +13,7 @@ use v5.36;
 use File::Spec::Functions qw(catdir catfile);
 use Unicode::Normalize qw(NFKD);
 
-use File::Slurper qw(read_lines read_text);
+use File::Slurper qw(read_dir read_lines read_text);
 
 {
 	# The first argument shall be treated as a prefix, if any.
@@ -62,7 +62,7 @@ use File::Slurper qw(read_lines read_text);
 
 sub map_locale_attributes ($prefix) {
 	my $top = catdir($prefix, '/usr/share/i18n/locales');
-	opendir(my $dh, $top) or die "Can't open '$top' as a directory: $!";
+	my @entries = read_dir($top);
 	my $regex = qr/
 		^
 		language  # attribute key
@@ -75,8 +75,7 @@ sub map_locale_attributes ($prefix) {
 		$
 	/mx;
 	my %attr_by;
-	while (my $locale = readdir $dh) {
-		next if $locale =~ m/^\./;
+	for my $locale (@entries) {
 		my $data = read_text("$top/$locale");
 		my %attr;
 		if ($data =~ $regex) {
