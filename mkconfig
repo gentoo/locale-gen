@@ -79,13 +79,13 @@ sub map_locale_attributes ($prefix) {
 		my $data = read_text("$top/$locale");
 		my %attr;
 		if ($data =~ $regex) {
-			my ($language, $territory) = ($1, ucfirst $2);
-			for ($language, $territory) {
+			@attr{'language', 'territory'} = ($1, ucfirst $2);
+			for (values %attr) {
 				if (m/[^\p{ASCII}]/) {
 					$_ = to_ascii($_);
 				}
 			}
-			for ($territory) {
+			for ($attr{'territory'}) {
 				if (m/^Myanmar/) {
 					$_ = 'Myanmar/Burma';
 				} elsif (m/^Russian Federation\z/) {
@@ -94,7 +94,6 @@ sub map_locale_attributes ($prefix) {
 					$_ = 'Turkey';
 				}
 			}
-			%attr = ('language' => $language, 'territory' => $territory);
 		}
 		$attr_by{$locale} = \%attr;
 	}
