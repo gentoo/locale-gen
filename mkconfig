@@ -28,6 +28,11 @@ use File::Slurper qw(read_lines read_text);
 	# Use column(1) to write out a nicely columnated list.
 	my $pipe = open_column("\037");
 
+	my $thrower = sub ($locale, $format) {
+		my $path = catfile($prefix, '/usr/share/i18n/locales', $locale);
+		die sprintf "mkconfig: $format", $path;
+	};
+
 	for my $line (@lines) {
 		my ($read_locale, $charmap) = split ' ', $line;
 
@@ -40,16 +45,16 @@ use File::Slurper qw(read_lines read_text);
 
 		# Compose a commented entry which also has a trailing comment,
 		# indicating the language and territory in plain English.
-		if (exists $attr_by->{$locale}) {
+		if (! exists $attr_by->{$locale}) {
+			$thrower->($locale, "Aborting because the '%s' file is missing\n");
+		} elsif (! $attr_by->{$locale}->%*) {
+			$thrower->($locale, "Aborting because no language attribute was found in '%s'\n");
+		} else {
 			my ($comment, $territory) = $attr_by->{$locale}->@{'language', 'territory'};
 			if (length $territory) {
 				$comment .= " ($territory)";
 			}
 			printf {$pipe} "# %s\037%s\037# %s\n", $read_locale, $charmap, $comment;
-		} elsif (-e (my $path = catfile($prefix, '/usr/share/i18n/locales', $locale))) {
-			die "mkconfig: Aborting because no language attribute was found in '$path'\n";
-		} else {
-			die "mkconfig: Aborting because the '$path' file is missing\n";
 		}
 	}
 	close $pipe or exit 1;
@@ -73,6 +78,7 @@ sub map_locale_attributes ($prefix) {
 	while (my $locale = readdir $dh) {
 		next if $locale =~ m/^\./;
 		my $data = read_text("$top/$locale");
+		my %attr;
 		if ($data =~ $regex) {
 			my ($language, $territory) = ($1, ucfirst $2);
 			for ($language, $territory) {
@@ -89,11 +95,9 @@ sub map_locale_attributes ($prefix) {
 					$_ = 'Turkey';
 				}
 			}
-			$attr_by{$locale} = {
-				'language'  => $language,
-				'territory' => $territory
-			};
+			%attr = ('language' => $language, 'territory' => $territory);
 		}
+		$attr_by{$locale} = \%attr;
 	}
 	return \%attr_by;
 }
