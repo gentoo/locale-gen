@@ -316,7 +316,23 @@ sub map_supported_combinations ($prefix) {
 	while (my $line = readline $fh) {
 		chomp $line;
 		if (2 == (my ($locale, $charmap) = split ' ', $line)) {
-			$supported_by{$locale}{$charmap} = 1;
+			# Designate the locale/charmap combination as supported.
+			$supported_by{$locale}{$charmap} = 0;
+
+			# Determine whether the locale merits a short-form alias
+			# by attempting to strip its codeset part, if any. See
+			# the parse_entry() subroutine as to the implications.
+			my $is_aliasable = $locale !~ s/\.[^@]+//;
+
+			# Designate the locale/charmap combination as supported,
+			# and potentially as one that merits a short-form alias.
+			# Since the codeset part was stripped, this also makes
+			# it possible to specify locales without incorporating
+			# a redundant charmap. For example, "en_US.UTF-8 UTF-8"
+			# may instead be specified as "en_US UTF-8".
+			$supported_by{$locale}{$charmap} = $is_aliasable;
+
+			# Designate the charmap as supported in its own right.
 			$supported_by{''}{$charmap} = 1;
 		}
 	}
@@ -367,18 +383,19 @@ sub parse_config ($fh, $path, $supported_by) {
 		}
 
 		# Validate both locale and character map before accepting.
+		my $is_aliasable;
 		if (! $supported_by->{$locale}) {
 			$thrower->('Invalid locale', $line);
 		} elsif (! $supported_by->{''}{$charmap}) {
 			$thrower->('Invalid charmap', $line);
-		} elsif (! $supported_by->{$locale}{$charmap}) {
+		} elsif (! defined($is_aliasable = $supported_by->{$locale}{$charmap})) {
 			$thrower->('Unsupported locale/charmap combination', $line);
 		}
 
 		# Determine the locale name in both the form that accords with
 		# the subdirectories of /usr/share/i18n/locales, and in the
 		# canonical form that incorporates the <codeset> part.
-		($locale, my $canonical, my $name) = parse_entry($locale, $charmap);
+		($locale, my $canonical, my $name) = parse_entry($locale, $charmap, $is_aliasable);
 
 		push @locales, [ $locale, $charmap, $canonical, $name ];
 	}
@@ -386,7 +403,7 @@ sub parse_config ($fh, $path, $supported_by) {
 	return @locales;
 }
 
-sub parse_entry ($locale, $charmap) {
+sub parse_entry ($locale, $charmap, $is_aliasable) {
 	my $canonical;
 	my $name;
 	if (2 == (my @fields = split /@/, $locale, 3)) {
@@ -405,7 +422,9 @@ sub parse_entry ($locale, $charmap) {
 		# of its canonical name. For example, "en_US" may refer to
 		# "en_US.iso88591". It is strongly discouraged to rely on this
 		# behaviour. Still, for now, arrange for such aliases to exist.
-		$name = $locale;
+		if ($is_aliasable) {
+			$name = $locale;
+		}
 	}
 	return $locale, $canonical, $name // $canonical;
 }

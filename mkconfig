@@ -34,10 +34,12 @@ use File::Slurper qw(read_dir read_lines read_text);
 	};
 
 	for my $line (@lines) {
-		my ($read_locale, $charmap) = split ' ', $line;
+		my ($locale, $charmap) = split ' ', $line;
 
-		# The names of the templates don't incorporate a codeset part.
-		my $locale = $read_locale =~ s/\.[^@]+//r;
+		# The names of the templates do not incorporate a codeset part.
+		# Further, as of locale-gen 3.10, the locale.gen(5) file never
+		# requires for the locale field to incorporate a codeset.
+		$locale =~ s/\.[^@]+//;
 
 		# Select only UTF-8 locales and refrain from incorporating the
 		# C.UTF-8 locale because is always compiled by locale-gen(8).
@@ -54,7 +56,7 @@ use File::Slurper qw(read_dir read_lines read_text);
 			if (length $territory) {
 				$comment .= " ($territory)";
 			}
-			printf {$pipe} "# %s\037%s\037# %s\n", $read_locale, $charmap, $comment;
+			printf {$pipe} "# %s\037%s\037# %s\n", $locale, $charmap, $comment;
 		}
 	}
 	close $pipe or exit 1;
