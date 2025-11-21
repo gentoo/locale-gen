@@ -395,7 +395,14 @@ sub parse_config ($fh, $path, $supported_by) {
 		# Determine the locale name in both the form that accords with
 		# the subdirectories of /usr/share/i18n/locales, and in the
 		# canonical form that incorporates the <codeset> part.
-		($locale, my $canonical, my $name) = parse_entry($locale, $charmap, $is_aliasable);
+		($locale, my $canonical) = parse_entry($locale, $charmap);
+
+		# Where given an input path whose name lacks a codeset part,
+		# localedef(1) will incorporate it into the archive as an alias
+		# of its canonical name. For example, "en_US" may refer to
+		# "en_US.iso88591". It is strongly discouraged to rely on this
+		# behaviour. Still, for now, arrange for such aliases to exist.
+		my $name = $is_aliasable ? $locale : $canonical;
 
 		push @locales, [ $locale, $charmap, $canonical, $name ];
 	}
@@ -403,7 +410,7 @@ sub parse_config ($fh, $path, $supported_by) {
 	return @locales;
 }
 
-sub parse_entry ($locale, $charmap, $is_aliasable) {
+sub parse_entry ($locale, $charmap) {
 	my $canonical;
 	my $name;
 	if (2 == (my @fields = split /@/, $locale, 3)) {
@@ -416,17 +423,8 @@ sub parse_entry ($locale, $charmap, $is_aliasable) {
 	} elsif (1 == @fields) {
 		# en_US ISO-8859-1 => en_US.ISO-8859-1
 		$canonical = "$locale.$charmap";
-
-		# Where given an input path whose name lacks a codeset part,
-		# localedef(1) will incorporate it into the archive as an alias
-		# of its canonical name. For example, "en_US" may refer to
-		# "en_US.iso88591". It is strongly discouraged to rely on this
-		# behaviour. Still, for now, arrange for such aliases to exist.
-		if ($is_aliasable) {
-			$name = $locale;
-		}
 	}
-	return $locale, $canonical, $name // $canonical;
+	return $locale, $canonical;
 }
 
 sub check_archive_dir ($prefix, $locale_dir) {
