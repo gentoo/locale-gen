@@ -321,7 +321,7 @@ sub map_supported_combinations ($prefix) {
 
 			# Determine whether the locale merits a short-form alias
 			# by attempting to strip its codeset part, if any. See
-			# the parse_entry() subroutine as to the implications.
+			# the parse_config() subroutine as to the implications.
 			my $is_aliasable = $locale !~ s/\.[^@]+//;
 
 			# Designate the locale/charmap combination as supported,
@@ -392,10 +392,14 @@ sub parse_config ($fh, $path, $supported_by) {
 			$thrower->('Unsupported locale/charmap combination', $line);
 		}
 
-		# Determine the locale name in both the form that accords with
-		# the subdirectories of /usr/share/i18n/locales, and in the
-		# canonical form that incorporates the <codeset> part.
-		($locale, my $canonical) = parse_entry($locale, $charmap);
+		# Strip the codeset part from the locale, if any. The names of
+		# the locale templates provided by glibc do not incorporate it.
+		$locale =~ s/\.[^@]+//;
+
+		# Compose the XPG4-conforming locale name, either by appending
+		# the charmap or by inserting it just before the modifier part
+		# e.g. en_US => en_US.UTF-8, be_by@latin => be_by.UTF-8@latin.
+		my $canonical = $locale =~ s/(@|\z)/.${charmap}$1/r;
 
 		# Where given an input path whose name lacks a codeset part,
 		# localedef(1) will incorporate it into the archive as an alias
@@ -408,23 +412,6 @@ sub parse_config ($fh, $path, $supported_by) {
 	}
 
 	return @locales;
-}
-
-sub parse_entry ($locale, $charmap) {
-	my $canonical;
-	my $name;
-	if (2 == (my @fields = split /@/, $locale, 3)) {
-		# de_DE@euro ISO-8859-15 => de_DE.ISO-8859-15@euro
-		$canonical = sprintf '%s.%s@%s', $fields[0], $charmap, $fields[1];
-	} elsif (2 == (@fields = split /\./, $locale, 3)) {
-		# en_US.UTF-8 UTF-8 => en_US.UTF-8
-		$locale = $fields[0];
-		$canonical = "$locale.$charmap";
-	} elsif (1 == @fields) {
-		# en_US ISO-8859-1 => en_US.ISO-8859-1
-		$canonical = "$locale.$charmap";
-	}
-	return $locale, $canonical;
 }
 
 sub check_archive_dir ($prefix, $locale_dir) {
