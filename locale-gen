@@ -582,7 +582,7 @@ sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 	run('mv', '--', $src_path, $interim_path);
 
 	# If a prior archive exists, attempt to preserve its SELinux label.
-	if ($has_seclabels && $has_archive) {
+	if ($has_seclabels && $has_archive && can_run('chcon')) {
 		copy_security_context($dst_path, $interim_path);
 	}
 
