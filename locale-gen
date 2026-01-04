@@ -72,8 +72,12 @@ umask 0022;
 	# Compose a dictionary of supported locale/charmap combinations.
 	my $supported_by = map_supported_combinations($prefix);
 
+	# Allow for the user to demote locale.gen(5) validation errors to mere
+	# warnings, while still treating localedef(1) errors as being critical.
+	my $be_strict = ! length $ENV{'LOCALEGEN_ALLOW_UNSUPPORTED'};
+
 	# Collect the locales that are being requested for installation.
-	push @locales, read_config($prefix, $supported_by, @config_files);
+	push @locales, read_config($prefix, $supported_by, $be_strict, @config_files);
 
 	# Compose a dictionary of installed locales for the --update option.
 	my %installed_by;
@@ -279,7 +283,7 @@ sub normalize ($canonical) {
 	}
 }
 
-sub read_config ($prefix, $supported_by, @paths) {
+sub read_config ($prefix, $supported_by, $be_strict, @paths) {
 	# Iterate over the given paths and return the first non-empty list of
 	# valid locale declarations that can be found among them, if any.
 	for my $i (keys @paths) {
@@ -296,7 +300,7 @@ sub read_config ($prefix, $supported_by, @paths) {
 				die $e;
 			}
 		}
-		my @locales = parse_config($fh, $path, $supported_by);
+		my @locales = parse_config($fh, $path, $supported_by, $be_strict);
 		if (my $count = scalar @locales) {
 			printf "Found %d locale declaration%s in '%s'.\n",
 				$count, plural($count), $path;
@@ -339,11 +343,16 @@ sub map_supported_combinations ($prefix) {
 	return \%supported_by;
 }
 
-sub parse_config ($fh, $path, $supported_by) {
+sub parse_config ($fh, $path, $supported_by, $be_strict) {
 	# Set up a helper routine to throw for validation errors.
-	my $thrower = sub ($error, $line) {
-		die sprintf "%s: %s at %s[%d]: %s\n",
-			$PROGRAM, $error, $path, $., render_printable($line);
+	my $thrower = sub ($error, $line, $is_fatal = 0) {
+		if ($be_strict || $is_fatal) {
+			die sprintf "%s: %s at %s[%d]: %s\n",
+				$PROGRAM, $error, $path, $., render_printable($line);
+		} else {
+			print_warning(sprintf "WARNING! %s at %s[%d]: %s\n",
+				$error, $path, $., render_printable($line));
+		}
 	};
 
 	my @locales;
@@ -359,7 +368,7 @@ sub parse_config ($fh, $path, $supported_by) {
 		my ($locale, $charmap);
 		chomp $line;
 		if (2 != (($locale, $charmap) = split /\h+/, trim_line($line))) {
-			$thrower->('Malformed locale declaration', $line);
+			$thrower->('Malformed locale declaration', $line, 1);
 		}
 
 		# Handle "UTF8" as a special case. Though glibc tolerates it,
