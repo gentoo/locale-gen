@@ -365,9 +365,11 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 		$line =~ s/\h\K#\h.*//;
 
 		# Expect for two fields, separated by horizontal whitespace.
-		my ($locale, $charmap);
+		# For the benefit of the lax validation mode, neither field may
+		# contain any <slash> characters.
 		chomp $line;
-		if (2 != (($locale, $charmap) = split /\h+/, trim_line($line))) {
+		my ($locale, $charmap);
+		if (2 != (($locale, $charmap) = $line =~ m/^\h*([^\h\/]+)\h+([^\h\/]+)\h*\z/)) {
 			$thrower->('Malformed locale declaration', $line, 1);
 		}
 
@@ -700,12 +702,6 @@ sub throw_child_error ($cmd, $status = $?) {
 		my $fate = ($status & 0x7F) ? 'interrupted by a signal' : 'unsuccessful';
 		die "$PROGRAM: Aborting because the execution of '$cmd' was $fate\n";
 	}
-}
-
-sub trim_line ($line) {
-	$line =~ s/^\h+//;
-	$line =~ s/\h+$//;
-	return $line;
 }
 
 sub get_username () {
