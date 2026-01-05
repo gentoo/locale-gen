@@ -355,6 +355,9 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 		}
 	};
 
+	# Select an appropriate adjective for errors of validation.
+	my $adjective = $be_strict ? 'Invalid' : 'Unsupported';
+
 	my @locales;
 	while (my $line = readline $fh) {
 		# Skip comments and blank lines. Note that \h will match only
@@ -396,9 +399,9 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 		# Validate both locale and character map before accepting.
 		my $is_aliasable;
 		if (! $supported_by->{$locale}) {
-			$thrower->('Invalid locale', $line);
+			$thrower->("$adjective locale", $line);
 		} elsif (! $supported_by->{''}{$charmap}) {
-			$thrower->('Invalid charmap', $line);
+			$thrower->("$adjective charmap", $line);
 		} elsif (! defined($is_aliasable = $supported_by->{$locale}{$charmap})) {
 			$thrower->('Unsupported locale/charmap combination', $line);
 		}
