@@ -344,22 +344,24 @@ sub map_supported_combinations ($prefix) {
 }
 
 sub parse_config ($fh, $path, $supported_by, $be_strict) {
+	my @locales;
+	my $line;
+
 	# Set up a helper routine to throw for validation errors.
-	my $thrower = sub ($error, $line, $is_fatal = 0) {
+	my $thrower = sub ($error, $is_fatal = 0) {
+		my $message = sprintf '%s at %s[%d]: %s',
+			$error, $path, $., render_printable($line);
 		if ($be_strict || $is_fatal) {
-			die sprintf "%s: %s at %s[%d]: %s\n",
-				$PROGRAM, $error, $path, $., render_printable($line);
+			die "$PROGRAM: $message\n";
 		} else {
-			print_warning(sprintf "WARNING! %s at %s[%d]: %s\n",
-				$error, $path, $., render_printable($line));
+			print_warning("WARNING! $message\n");
 		}
 	};
 
 	# Select an appropriate adjective for errors of validation.
 	my $adjective = $be_strict ? 'Invalid' : 'Unsupported';
 
-	my @locales;
-	while (my $line = readline $fh) {
+	while ($line = readline $fh) {
 		# Skip comments and blank lines. Note that \h will match only
 		# " " and "\t", since the input stream is not being decoded.
 		next if $line =~ m/^\h*($|#)/n;
@@ -373,7 +375,7 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 		chomp $line;
 		my ($locale, $charmap);
 		if (2 != (($locale, $charmap) = $line =~ m/^\h*([^\h\/]+)\h+([^\h\/]+)\h*\z/)) {
-			$thrower->('Malformed locale declaration', $line, 1);
+			$thrower->('Malformed locale declaration', 1);
 		}
 
 		# Handle "UTF8" as a special case. Though glibc tolerates it,
@@ -399,11 +401,11 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 		# Validate both locale and character map before accepting.
 		my $is_aliasable;
 		if (! $supported_by->{$locale}) {
-			$thrower->("$adjective locale", $line);
+			$thrower->("$adjective locale");
 		} elsif (! $supported_by->{''}{$charmap}) {
-			$thrower->("$adjective charmap", $line);
+			$thrower->("$adjective charmap");
 		} elsif (! defined($is_aliasable = $supported_by->{$locale}{$charmap})) {
-			$thrower->('Unsupported locale/charmap combination', $line);
+			$thrower->('Unsupported locale/charmap combination');
 		}
 
 		# Strip the codeset part from the locale, if any. The names of
