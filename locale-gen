@@ -591,12 +591,12 @@ sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 		print "The filesystem is mounted with support for SELinux security labels.\n";
 	}
 	if ($has_seclabels && $has_archive) {
-		my $action = 'copy the security context of the previous archive';
+		my $action = 'copying the security context of the previous archive';
 		if (can_run('chcon')) {
-			print "Attempting to $action ...\n";
+			print ucfirst $action, " ...\n";
 			copy_security_context($dst_path, $interim_path);
 		} else {
-			print_warning("Not attempting to $action because chcon(1) is unavailable.\n");
+			print_warning("Not $action because chcon(1) is unavailable.\n");
 		}
 	}
 
@@ -607,12 +607,12 @@ sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 
 	# If no prior archive existed, restore the appropriate SELinux label.
 	if ($has_seclabels && ! $has_archive && $may_reset_labels) {
-		my $action = 'restore the default security context of the archive';
+		my $action = 'restoring the default security context of the archive';
 		if (can_run('restorecon')) {
-			print "Attempting to $action ...\n";
+			print ucfirst $action, " ...\n";
 			run('restorecon', '-Fmv', '--', $dst_path);
 		} else {
-			print_warning("Not attempting to $action because restorecon(8) is unavailable.\n");
+			print_warning("Not $action because restorecon(8) is unavailable.\n");
 		}
 	}
 
