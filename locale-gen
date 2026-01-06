@@ -89,17 +89,14 @@ umask 0022;
 	}
 
 	# Filter out locales that are duplicates or that are already installed.
-	my %requested_by;
-	my $i = 0;
-	while ($i <= $#locales) {
-		my $canonical = $locales[$i][2];
-		my $normal = normalize($canonical);
-		if ($requested_by{$normal}++ || $installed_by{$normal}) {
-			splice @locales, $i, 1;
-		} else {
-			++$i;
-		}
-	}
+	@locales = do {
+		my %requested_by;
+		grep {
+			my $canonical = $_->[2];
+			my $normal = normalize($canonical);
+			! $requested_by{$normal}++ && ! $installed_by{$normal};
+		} @locales;
+	};
 
 	# If a non-actionable update was requested, proceed no further.
 	if (! @locales) {
