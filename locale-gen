@@ -355,6 +355,13 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 		}
 	};
 
+	# Set up a helper routine to issue warnings regarding the UTF8 misnomer.
+	my $utf8_warner = sub ($i) {
+		print_warning(sprintf
+			'WARNING! Charmap specified as UTF8 in field #%d (should be UTF-8) at %s[%d]: %s',
+			$i, $path, $., render_printable($line));
+	};
+
 	# Select an appropriate adjective for errors of validation.
 	my $adjective = $be_strict ? 'Invalid' : 'Unsupported';
 
@@ -382,22 +389,12 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 
 		# Handle "UTF8" as a special case. Though glibc tolerates it,
 		# locale-gen would otherwise not because there is no charmap
-		# file by that name. The intention is to encourage users to
-		# amend their config files before eventually dropping support
-		# for "UTF8" altogether.
-		my @warnings;
+		# file by that name. This code will eventually be removed.
 		if ($locale =~ s/\.UTF\K8(?=@|\z)/-8/) {
-			push @warnings,
-				sprintf "Codeset specified as UTF8 (should be UTF-8) at %s[%d]: %s",
-					$path, $., render_printable($line);
+			$utf8_warner->(1);
 		}
 		if ($charmap =~ s/^UTF\K8\z/-8/) {
-			push @warnings,
-				sprintf "Charmap specified as UTF8 (should be UTF-8) at %s[%d]: %s",
-					$path, $., render_printable($line);
-		}
-		for my $warning (@warnings) {
-			print_warning("WARNING! $warning\n");
+			$utf8_warner->(2);
 		}
 
 		# Validate both locale and character map before accepting.
