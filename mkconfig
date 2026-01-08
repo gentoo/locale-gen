@@ -56,7 +56,7 @@ use File::Slurper qw(read_dir read_lines read_text);
 			if (length $territory) {
 				$comment .= " ($territory)";
 			}
-			printf {$pipe} "# %s\037%s\037# %s\n", $locale, $charmap, $comment;
+			print {$pipe} "# ${locale}\037# ${comment}\n";
 		}
 	}
 	close $pipe or exit 1;

@@ -4,7 +4,7 @@ locale.gen - configuration file for locale\-gen
 .SH "DESCRIPTION"
 The \fBlocale\-gen\fR(8) utility compiles the locales specified by the \fI/etc/locale.gen\fR file and integrates them into a locale archive.
 .P
-The file is comprised of zero or more lines containing two fields separated by one or more <blank> characters. The first field defines the \fIlocalename\fR. The second field defines the \fIcharmap\fR, also known as a character set or codeset. The <slash> character is forbidden within both fields.
+The file is comprised of zero or more lines containing one or two fields separated by one or more <blank> characters. The first field defines the \fIlocalename\fR. The second field defines the \fIcharmap\fR, also known as a character set or codeset. The <slash> character is forbidden within both fields. If only one field is specified, the \fIcharmap\fR value shall be taken as "UTF-8".
 .P
 Empty lines and lines beginning with zero or more <blank> characters followed by a <number\-sign> character shall be ignored.
 .P
@@ -31,19 +31,16 @@ A \fIcharmap\fR represents a mapping of character symbols and collating element 
 The complete list of supported \fIcharmap\fR values can be obtained by reading the second column of the \fI/usr/share/i18n/SUPPORTED\fR file. The values map directly to the names of files within the \fI/usr/share/i18n/charmaps\fR directory.
 .SH "EXAMPLES"
 .EX
-# This is a comment, followed by some valid locale declarations.
-en_US        UTF\-8 # trailing comments are permitted
-en_US.UTF-8  UTF\-8 # considered as identical to the preceding entry
-zh_CN        UTF\-8
-de_DE        UTF\-8
-hi_IN        UTF\-8
-ja_JP        UTF\-8
+# The following three declarations are considered as identical.
+en_US.UTF-8  UTF-8 # trailing comments are permitted
+en_US        UTF-8 # the charmap may be omitted from the localename
+en_US              # the charmap is taken as UTF-8
 .sp
-# Invalid because the localename/charmap combination is unsupported.
+# Other charmaps may be specified (not recommended).
+en_US        ISO-8859-1
+.sp
+# Invalid because the localename/charmap pair is unsupported.
 en_US        GB2312
-.sp
-# Malformed because the charmap field is missing.
-en_US
 .EE
 .SH "FILES"
 .TP

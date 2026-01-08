@@ -366,12 +366,17 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 		# Permit comments trailing locale declarations.
 		$line =~ s/\h\K#\h.*//;
 
-		# Expect for two fields, separated by horizontal whitespace.
-		# For the benefit of the lax validation mode, neither field may
-		# contain any <slash> characters.
 		chomp $line;
+
+		# A well-formed entry must contain either one or two fields. The
+		# first defines the localename. The second defines the charmap.
+		# If the second field is missing, a value of "UTF-8" is assumed.
+		# The <slash> character is forbidden in both fields.
+		my @fields;
 		my ($locale, $charmap);
-		if (2 != (($locale, $charmap) = $line =~ m/^\h*([^\h\/]+)\h+([^\h\/]+)\h*\z/)) {
+		if (0 < (@fields = split /\h+/, trim_line($line), 3) < 3 && ! grep +( m/\// ), @fields) {
+			($locale, $charmap) = ($fields[0], $fields[1] // 'UTF-8');
+		} else {
 			$thrower->('Malformed locale declaration', 1);
 		}
 
@@ -757,6 +762,12 @@ sub is_eq_file ($path1, $path2) {
 	my @stat1 = stat $path1;
 	my @stat2 = stat $path2;
 	return @stat1 && @stat2 && $stat1[1] == $stat2[1];
+}
+
+sub trim_line ($line) {
+	$line =~ s/^\h+//;
+	$line =~ s/\h+$//;
+	return $line;
 }
 
 END {
