@@ -11,7 +11,7 @@ use Errno qw(ENOENT);
 use File::Spec::Functions qw(canonpath catfile catdir path splitpath);
 use File::Temp qw(tempdir);
 use Getopt::Long ();
-use List::Util qw(any first min);
+use List::Util qw(all any first min);
 use Term::ANSIColor qw(colored);
 
 # Formally stable as of v5.40; sufficiently functional in both v5.36 and v5.38.
@@ -751,11 +751,11 @@ sub print_warning ($warning) {
 	}
 }
 
-sub is_eq_file ($path1, $path2) {
-	# Compare the inode numbers, just as the test(1) -ef operator does.
-	my @stat1 = stat $path1;
-	my @stat2 = stat $path2;
-	return @stat1 && @stat2 && $stat1[1] == $stat2[1];
+sub is_eq_file ($file1, $file2) {
+	# Compare the "dev" and "ino" fields, like the test(1) -ef operator.
+	my @stat1 = stat $file1;
+	my @stat2 = stat $file2;
+	return @stat1 && @stat2 && all(sub { $stat1[$_] == $stat2[$_] }, 0..1);
 }
 
 sub trim_line ($line) {
