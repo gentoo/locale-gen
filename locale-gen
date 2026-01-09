@@ -679,7 +679,8 @@ sub plural ($int) {
 
 sub render_printable ($value) {
 	require JSON::PP;
-	return JSON::PP->new->ascii->space_after->encode($value)
+	state $coder = JSON::PP->new->ascii->space_after;
+	return $coder->encode($value)
 }
 
 sub run ($cmd, @args) {
