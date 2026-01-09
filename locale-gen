@@ -235,14 +235,15 @@ sub show_usage (@options) {
 	my $pipe;
 	if (! open $pipe, "| column -t -s \037") {
 		exit 1;
+	} else {
+		for my $row (@options) {
+			my ($spec, $description) = $row->@*;
+			my ($long, $short) = split /[|=]/, $spec;
+			printf {$pipe} "-%s, --%s\037%s\n", $short, $long, $description;
+		}
+		close $pipe;
+		print "\nSee also: locale-gen(8), locale.gen(5)\n";
 	}
-	for my $row (@options) {
-		my ($spec, $description) = $row->@*;
-		my ($long, $short) = split /[|=]/, $spec;
-		printf {$pipe} "-%s, --%s\037%s\n", $short, $long, $description;
-	}
-	close $pipe;
-	print "\nSee also: locale-gen(8), locale.gen(5)\n";
 }
 
 sub show_version () {
