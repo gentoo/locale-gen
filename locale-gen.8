@@ -68,11 +68,11 @@ Contains locale definition files that serve as inputs to \fBlocaledef\fR(1).
 Contains character map files that serve as inputs to \fBlocaledef\fR(1).
 .SH "ENVIRONMENT"
 .TP
-LOCALEGEN\_CONFIG
-Defines the path of the \fIconfig\fR file in the absence of the \fB-A\fR and \fB-c\fR options.
-.TP
 LOCALEGEN\_ALLOW\_UNSUPPORTED
 If set as a non-empty string, errors caused by locale\-gen being unable to validate the \fIconfig\fR file shall be conveyed as mere warnings, with the exception of any that concern malformed entries. However, errors caused by \fBlocaledef\fR(1) being unable to compile a given locale shall still be considered as fatal.
+.TP
+LOCALEGEN\_CONFIG
+Defines the path of the \fIconfig\fR file in the absence of the \fB-A\fR and \fB-c\fR options.
 .TP
 NO_COLOR
 If set as a non-empty string, coloured output text shall be disabled.
