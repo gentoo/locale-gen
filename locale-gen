@@ -358,7 +358,7 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 	# Set up a helper routine to issue warnings regarding the UTF8 misnomer.
 	my $utf8_warner = sub ($i) {
 		print_warning(sprintf
-			"WARNING! Charmap specified as UTF8 in field #%d (should be UTF-8) at %s[%d]: %s\n",
+			"WARNING! UTF8 should be written as UTF-8 in field #%d at %s[%d]: %s\n",
 			$i, $path, $., render_printable($line));
 	};
 
