@@ -574,7 +574,11 @@ sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @names) {
 
 sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 	# Determine whether the underlying filesystem supports SELinux labels.
-	my $has_seclabels = has_mount_option(dirname($dst_path), 'seclabel');
+	my $has_seclabels;
+	if (has_mount_option(dirname($dst_path), 'seclabel')) {
+		print "The filesystem is mounted with support for SELinux security labels.\n";
+		$has_seclabels = 1;
+	}
 
 	# Determine whether a previously installed archive exists.
 	my $has_archive = $has_seclabels && -e $dst_path;
@@ -588,9 +592,6 @@ sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 	run('mv', '--', $src_path, $interim_path);
 
 	# If a prior archive exists, attempt to preserve its SELinux label.
-	if ($has_seclabels) {
-		print "The filesystem is mounted with support for SELinux security labels.\n";
-	}
 	if ($has_seclabels && $has_archive) {
 		my $action = 'copying the security context of the previous archive';
 		if (can_run('chcon')) {
