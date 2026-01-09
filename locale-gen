@@ -72,8 +72,7 @@ umask 0022;
 	# Compose a dictionary of supported locale/charmap combinations.
 	my $supported_by = map_supported_combinations($prefix);
 
-	# Allow for the user to demote locale.gen(5) validation errors to mere
-	# warnings, while still treating localedef(1) errors as being critical.
+	# Allow for locale.gen(5) validation errors to be demoted to warnings.
 	my $be_strict = ! length $ENV{'LOCALEGEN_ALLOW_UNSUPPORTED'};
 
 	# Collect the locales that are being requested for installation.
