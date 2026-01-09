@@ -466,7 +466,7 @@ sub generate_locales ($workers, @locales) {
 	local @SIG{'INT', 'TERM'} = ($handler, $handler);
 
 	my $total = scalar @locales;
-	$workers = min($workers, $total)
+	$workers = min($workers, $total);
 	printf "Compiling %d locale%s with %d worker%s ...\n",
 		$total, plural($total), $workers, plural($workers);
 
