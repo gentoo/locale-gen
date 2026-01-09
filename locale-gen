@@ -628,10 +628,7 @@ sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 
 sub check_effective_locale ($supported_by) {
 	my $locale = first(sub { length $_ }, @ENV{'LC_ALL', 'LANG'});
-	if (! defined $locale || $locale =~ m/\./) {
-		# No locale is effective, or that which is specifies a codeset.
-		return;
-	} elsif (exists $supported_by->{$locale}) {
+	if (defined $locale && $locale !~ m/\./ && exists $supported_by->{$locale}) {
 		print_warning("WARNING! An ambiguous locale is currently in effect: $locale\n");
 		my $utility;
 		if (-d '/run/systemd') {
