@@ -11,7 +11,7 @@ use Errno qw(ENOENT);
 use File::Spec::Functions qw(canonpath catfile catdir path splitpath);
 use File::Temp qw(tempdir);
 use Getopt::Long ();
-use List::Util qw(any first);
+use List::Util qw(any first min);
 use Term::ANSIColor qw(colored);
 
 # Formally stable as of v5.40; sufficiently functional in both v5.36 and v5.38.
@@ -466,9 +466,7 @@ sub generate_locales ($workers, @locales) {
 	local @SIG{'INT', 'TERM'} = ($handler, $handler);
 
 	my $total = scalar @locales;
-	if ($total < $workers) {
-		$workers = $total;
-	}
+	$workers = min($workers, $total)
 	printf "Compiling %d locale%s with %d worker%s ...\n",
 		$total, plural($total), $workers, plural($workers);
 
