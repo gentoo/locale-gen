@@ -73,6 +73,9 @@ Defines the path of the \fIconfig\fR file in the absence of the \fB-A\fR and \fB
 .TP
 LOCALEGEN\_ALLOW\_UNSUPPORTED
 If set as a non-empty string, errors caused by locale\-gen being unable to validate the \fIconfig\fR file shall be conveyed as mere warnings, with the exception of any that concern malformed entries. However, errors caused by \fBlocaledef\fR(1) being unable to compile a given locale shall still be considered as fatal.
+.TP
+NO_COLOR
+If set as a non-empty string, coloured output text shall be disabled.
 .SH "EXIT STATUS"
 The exit status shall be 0 under any of these conditions:
 .IP \[bu] 2
