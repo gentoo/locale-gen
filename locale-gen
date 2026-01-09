@@ -430,11 +430,11 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 }
 
 sub check_archive_dir ($prefix, $locale_dir) {
-	my $archive_dir = local $ENV{'DIR'} = catdir($prefix, $locale_dir);
+	my $archive_dir = catdir($prefix, $locale_dir);
 
 	# Quietly attempt to create the directory if it does not already exist.
 	{
-		local $ENV{'LC_ALL'} = 'C';
+		local @ENV{'LC_ALL', 'DIR'} = ('C', $archive_dir);
 		system q{ mkdir -p -- "$DIR" 2>/dev/null };
 	}
 
