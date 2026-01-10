@@ -365,14 +365,14 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 	my $adjective = $be_strict ? 'Invalid' : 'Unsupported';
 
 	while ($line = readline $fh) {
+		chomp $line;
+
 		# Skip comments and blank lines. Note that \h will match only
 		# " " and "\t", since the input stream is not being decoded.
-		next if $line =~ m/^\h*($|#)/n;
+		next if $line =~ m/^\h*(\z|#)/n;
 
 		# Permit comments trailing locale declarations.
 		$line =~ s/\h\K#\h.*//;
-
-		chomp $line;
 
 		# A well-formed entry must contain either one or two fields. The
 		# first defines the localename. The second defines the charmap.
