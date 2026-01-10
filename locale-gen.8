@@ -31,7 +31,7 @@ If the configuration file is missing, empty, or consists only of comments, local
 Compile all locales that are officially supported by glibc. Cannot be combined with the \fB-c\fR option.
 .TP
 \fB\-c\fR, \fB\-\-config\fR \fIconfig\fR
-Read the given \fIconfig\fR file (defaults to \fIprefix\fR/etc/locale.gen). The file may be specified as <hyphen-minus>, in which case locale\-gen shall read the configuration from standard input. If the LOCALEGEN\_CONFIG variable is found to be set in the environment, and neither the \fB-A\fR nor \fB-c\fR option is specified, its value shall be taken as a literal \fIconfig\fR file path.
+Read the given \fIconfig\fR file (defaults to \fIprefix\fR/etc/locale.gen). If specified as a \%<hyphen-minus>, locale\-gen shall read the configuration from standard input.
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 Write out a synopsis and summary of the supported options then exit.
