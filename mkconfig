@@ -118,7 +118,7 @@ sub open_column ($sep) {
 
 	# The encoding is applied as a precaution; over-wide characters written
 	# to the pipe become Perl escape sequences e.g. U+00E5 => \x{00e5}.
-	if (! open my $pipe, '|-:encoding(US-ASCII)', 'column', '-ts', $sep) {
+	if (! open my $pipe, '|-:encoding(US-ASCII)', 'column', '-t', '-s', $sep, '-o', ' ') {
 		exit 127;
 	} else {
 		return $pipe;
