@@ -22,7 +22,7 @@ locale\-gen - safely compile and install a glibc locale archive
 .SH "DESCRIPTION"
 The locale\-gen utility provides a means by which a system administrator may conveniently manage the set of locales that are made available to the GNU C Library. It accomplishes this by acting as a user-friendly frontend for the \fBlocaledef\fR(1) utility, which is used to compile locales and integrate them into a central archive.
 .P
-By default, locale\-gen generates an archive containing a full complement of supported locales, numbering 500 or more. However, it is typical for an administrator to require only one or two of these. In that case, the \fIconfig\fR file may be populated with a list of the required locales. Consequently, locale\-gen shall compile only the locales that are specified, saving both time and space in the longer term.
+By default, locale\-gen generates an archive containing a full complement of supported locales, numbering 500 or more. However, it is typical for an administrator to require only one or two of these. In that case, the \fIconfig\fR file may be populated with a list of the required locales. Consequently, locale\-gen shall compile only those, saving both time and space in the longer term.
 .P
 If the \fIconfig\fR file is missing, empty, or consists only of comments, locale\-gen shall act in one of two ways, depending on whether the \fB\-c\fR option or LOCALEGEN\_CONFIG environment variable was specified. If neither was specified, locale\-gen shall act as if the \fB\-A\fR option had been specified. Otherwise, locale\-gen shall abort.
 .SH "OPTIONS"
