@@ -91,9 +91,8 @@ umask 0022;
 	@locales = do {
 		my %requested_by;
 		grep {
-			my $canonical = $_->[2];
-			my $normal = normalize($canonical);
-			! $requested_by{$normal}++ && ! $installed_by{$normal};
+			my $canonical = normalize_codeset($_->[2]);
+			! $requested_by{$canonical}++ && ! $installed_by{$canonical};
 		} @locales;
 	};
 
@@ -268,8 +267,8 @@ sub list_locales ($prefix) {
 	}
 }
 
-sub normalize ($canonical) {
-	# This is similar to the normalize_codeset() function of localedef(1).
+sub normalize_codeset ($canonical) {
+	# This function acts similarly to its namesake in localedef(1).
 	if ($canonical !~ m/(?<=\.)[^@]+/p) {
 		die "Can't normalize " . render_printable($canonical);
 	} else {
