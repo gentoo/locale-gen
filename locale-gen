@@ -744,7 +744,7 @@ sub can_run ($bin) {
 
 sub print_warning ($warning) {
 	if (-t 2) {
-		*STDOUT->flush;
+		local $Term::ANSIColor::EACHLINE = "\n";
 		print STDERR colored($warning, 'bold yellow');
 	} else {
 		print STDERR $warning;
