@@ -403,7 +403,7 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 		} elsif (! $supported_by->{''}{$charmap}) {
 			$thrower->("$adjective charmap");
 		} elsif (! defined($is_aliasable = $supported_by->{$locale}{$charmap})) {
-			$thrower->('Unsupported locale/charmap combination');
+			$thrower->("$adjective locale/charmap combination");
 		}
 
 		# Strip the codeset part from the locale, if any. The names of
