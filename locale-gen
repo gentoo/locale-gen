@@ -11,7 +11,7 @@ use Errno qw(ENOENT);
 use File::Spec::Functions qw(canonpath catfile catdir path splitpath);
 use File::Temp qw(tempdir);
 use Getopt::Long ();
-use List::Util qw(all any first min);
+use List::Util qw(all any first min none);
 use Term::ANSIColor qw(colored);
 
 # Formally stable as of v5.40; sufficiently functional in both v5.36 and v5.38.
@@ -656,7 +656,7 @@ sub copy_security_context ($src_path, $dst_path) {
 sub fopen ($path) {
 	if (! open my $fh, '<', $path) {
 		die "$PROGRAM: Can't open '$path': $!\n";
-	} elsif (! -f $fh && canonpath($path) !~ m/^\/dev\/(null|stdin)\z/n) {
+	} elsif (! -f $fh && none(sub { is_eq_file($path, $_) }, '/dev/null', '/dev/stdin')) {
 		die "$PROGRAM: Won't open '$path' because it is not a regular file\n";
 	} else {
 		return $fh;
