@@ -28,13 +28,15 @@ use File::Slurper qw(read_dir read_lines read_text);
 	# Use column(1) to write out a nicely columnated list.
 	my $pipe = open_column("\037");
 
-	my $thrower = sub ($locale, $format) {
+	my $locale;
+
+	my $thrower = sub ($format) {
 		my $path = catfile($prefix, '/usr/share/i18n/locales', $locale);
 		die sprintf "mkconfig: $format", $path;
 	};
 
 	for my $line (@lines) {
-		my ($locale, $charmap) = split ' ', $line;
+		($locale, my $charmap) = split ' ', $line;
 
 		# The names of the templates do not incorporate a codeset part.
 		# Further, as of locale-gen 3.10, the locale.gen(5) file never
@@ -48,9 +50,9 @@ use File::Slurper qw(read_dir read_lines read_text);
 		# Compose a commented entry which also has a trailing comment,
 		# indicating the language and territory in plain English.
 		if (! exists $attr_by->{$locale}) {
-			$thrower->($locale, "Aborting because the '%s' file is missing\n");
+			$thrower->("Aborting because the '%s' file is missing\n");
 		} elsif (! $attr_by->{$locale}->%*) {
-			$thrower->($locale, "Aborting because no language attribute was found in '%s'\n");
+			$thrower->("Aborting because no language attribute was found in '%s'\n");
 		} else {
 			my ($comment, $territory) = $attr_by->{$locale}->@{'language', 'territory'};
 			if (length $territory) {
