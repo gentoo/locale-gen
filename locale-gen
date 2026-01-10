@@ -743,7 +743,8 @@ sub can_run ($bin) {
 }
 
 sub print_warning ($warning) {
-	if (-t 2) {
+	state $is_tty = -t 2;
+	if ($is_tty) {
 		local $Term::ANSIColor::EACHLINE = "\n";
 		print STDERR colored($warning, 'bold yellow');
 	} else {
