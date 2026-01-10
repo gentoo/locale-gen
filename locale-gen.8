@@ -24,7 +24,7 @@ The locale\-gen utility provides a means by which a system administrator may con
 .P
 By default, locale\-gen generates an archive containing a full complement of supported locales, numbering 500 or more. However, it is typical for an administrator to require only one or two of these. In that case, the \fI/etc/locale.gen\fR configuration file may be populated with a list of the required locales. Consequently, locale\-gen shall compile only the locales that are specified, saving both time and space in the longer term.
 .P
-If the configuration file is missing, empty, or consists only of comments, locale\-gen shall act in one of two ways, depending on whether the \fB\-c\fR option or LOCALEGEN\_CONFIG environment variable was specified. If neither was specified, locale\-gen shall act as if the \fB\-A\fR option had been specified. Otherwise, locale\-gen shall abort with a suitable diagnostic message.
+If the configuration file is missing, empty, or consists only of comments, locale\-gen shall act in one of two ways, depending on whether the \fB\-c\fR option or LOCALEGEN\_CONFIG environment variable was specified. If neither was specified, locale\-gen shall act as if the \fB\-A\fR option had been specified. Otherwise, locale\-gen shall abort.
 .SH "OPTIONS"
 .TP
 \fB\-A\fR, \fB\-\-all\fR
