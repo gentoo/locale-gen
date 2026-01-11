@@ -378,9 +378,9 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 		# first defines the localename. The second defines the charmap.
 		# If the second field is missing, a value of "UTF-8" is assumed.
 		# The <slash> character is forbidden in both fields.
-		my @fields;
+		my @fields = split /\h+/, trim_line($line), 3;
 		my ($locale, $charmap);
-		if (0 < (@fields = split /\h+/, trim_line($line), 3) < 3 && ! grep +( m/\// ), @fields) {
+		if (0 < @fields < 3 && ! grep +( m/\// ), @fields) {
 			($locale, $charmap) = ($fields[0], $fields[1] // 'UTF-8');
 		} else {
 			invalidate('Malformed locale declaration', 1);
@@ -656,7 +656,7 @@ sub copy_security_context ($src_path, $dst_path) {
 sub fopen ($path) {
 	if (! open my $fh, '<', $path) {
 		die "$PROGRAM: Can't open '$path': $!\n";
-	} elsif (! -f $fh && none(sub { is_eq_file($path, $_) }, '/dev/null', '/dev/stdin')) {
+	} elsif (! -f $fh && none(sub { is_eq_file($path, "/dev/$_") }, 'null', 'stdin')) {
 		die "$PROGRAM: Won't open '$path' because it is not a regular file\n";
 	} else {
 		return $fh;
