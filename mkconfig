@@ -30,7 +30,7 @@ use File::Slurper qw(read_dir read_lines read_text);
 
 	my $locale;
 
-	my $thrower = sub ($format) {
+	my sub abort ($format) {
 		my $path = catfile($prefix, '/usr/share/i18n/locales', $locale);
 		die sprintf "mkconfig: $format", $path;
 	};
@@ -50,9 +50,9 @@ use File::Slurper qw(read_dir read_lines read_text);
 		# Compose a commented entry which also has a trailing comment,
 		# indicating the language and territory in plain English.
 		if (! exists $attr_by->{$locale}) {
-			$thrower->("Aborting because the '%s' file is missing\n");
+			abort("Aborting because the '%s' file is missing\n");
 		} elsif (! $attr_by->{$locale}->%*) {
-			$thrower->("Aborting because no language attribute was found in '%s'\n");
+			abort("Aborting because no language attribute was found in '%s'\n");
 		} else {
 			my ($comment, $territory) = $attr_by->{$locale}->@{'language', 'territory'};
 			if (length $territory) {
