@@ -126,7 +126,7 @@ umask 0022;
 	my $is_prefixed = length $prefix && ! is_eq_file($prefix, '/');
 	my $size = install_archive($src_path, $dst_path, ! $is_prefixed);
 
-	my $total = scalar @locales + scalar %installed_by;
+	my $total = @locales + %installed_by;
 	printf "Successfully installed an archive containing %d locale%s, of %s MiB in size.\n",
 		$total, plural($total), round($size / 2 ** 20);
 
@@ -297,7 +297,7 @@ sub read_config ($prefix, $supported_by, $be_strict, @paths) {
 			}
 		}
 		my @locales = parse_config($fh, $path, $supported_by, $be_strict);
-		if (my $count = scalar @locales) {
+		if (my $count = @locales) {
 			printf "Found %d locale declaration%s in '%s'.\n",
 				$count, plural($count), $path;
 			return @locales;
@@ -305,7 +305,7 @@ sub read_config ($prefix, $supported_by, $be_strict, @paths) {
 	}
 
 	# For no locales to have been discovered at this point is exceptional.
-	my $path_list = render_printable(scalar @paths == 1 ? $paths[0] : \@paths);
+	my $path_list = render_printable(@paths == 1 ? $paths[0] : \@paths);
 	die "$PROGRAM: No locale declarations were found within $path_list\n";
 }
 
@@ -464,7 +464,7 @@ sub generate_locales ($workers, @locales) {
 	my $handler = sub ($signal) { $DEFERRED_SIGNAL ||= $signal };
 	local @SIG{'INT', 'TERM'} = ($handler, $handler);
 
-	my $total = scalar @locales;
+	my $total = @locales;
 	$workers = min($workers, $total);
 	printf "Compiling %d locale%s with %d worker%s ...\n",
 		$total, plural($total), $workers, plural($workers);
@@ -516,7 +516,7 @@ sub generate_locales ($workers, @locales) {
 	if ($DEFERRED_SIGNAL) {
 		# The signal shall be propagated by the END block.
 		exit;
-	} elsif (scalar %status_by != $total) {
+	} elsif (%status_by != $total) {
 		die "$PROGRAM: Aborting because not all of the selected locales were compiled\n";
 	}
 }
@@ -537,7 +537,7 @@ sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @names) {
 	}
 
 	# Integrate all of the compiled locales into the new locale archive.
-	my $total = scalar @names;
+	my $total = @names;
 	printf "Adding %d locale%s to the locale archive ...\n", $total, plural($total);
 	my $stderr;
 	if (! defined(my $pid = open my $pipe, '-|')) {
