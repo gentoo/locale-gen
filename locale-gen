@@ -664,11 +664,7 @@ sub fopen ($path) {
 }
 
 sub get_nprocs () {
-	my $nproc = do {
-		local $ENV{'LC_ALL'} = 'C';
-		qx{ { nproc || getconf _NPROCESSORS_CONF; } 2>/dev/null };
-	};
-	chomp $nproc;
+	chomp(my $nproc = qx{ getconf _NPROCESSORS_ONLN });
 	return $nproc;
 }
 
