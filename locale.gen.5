@@ -1,14 +1,14 @@
 .TH locale.gen 5 "January 2026" "Gentoo"
 .SH "NAME"
-locale.gen - configuration file for locale\-gen
+locale.gen - configuration file for locale-gen
 .SH "DESCRIPTION"
-The \fBlocale\-gen\fR(8) utility compiles the locales specified by the \fI/etc/locale.gen\fR file and integrates them into a locale archive.
+The \fBlocale-gen\fR(8) utility compiles the locales specified by the \fI/etc/locale.gen\fR file and integrates them into a locale archive.
 .P
 The file is comprised of zero or more lines containing one or two fields separated by one or more <blank> characters. The first field defines the \fIlocalename\fR. The second field defines the \fIcharmap\fR, also known as a character set or codeset. The <slash> character is forbidden within both fields. If only one field is specified, the \fIcharmap\fR value shall be taken as "UTF-8".
 .P
-Empty lines and lines beginning with zero or more <blank> characters followed by a <number\-sign> character shall be ignored.
+Empty lines and lines beginning with zero or more <blank> characters followed by a <number-sign> character shall be ignored.
 .P
-A <number\-sign> character surrounded by <blank> characters may appear after the second field and shall also be ignored, along with the remainder of the line.
+A <number-sign> character surrounded by <blank> characters may appear after the second field and shall also be ignored, along with the remainder of the line.
 .P
 The definition of a <blank> character is that it is either the <tab> or <space> character.
 .P
@@ -56,7 +56,7 @@ Contains locale definition files that serve as inputs to \fBlocaledef\fR(1).
 .I /usr/share/i18n/charmaps
 Contains character map files that serve as inputs to \fBlocaledef\fR(1).
 .SH "SEE ALSO"
-.BR locale\-gen (8),
+.BR locale-gen (8),
 .BR localectl (1),
 .BR locale (1),
 .BR localedef (1)
@@ -66,7 +66,7 @@ System Interface Definitions, Issue 4, Version 2 (XBD) (1994)
 .UR https:\://pubs\:.opengroup\:.org/onlinepubs/009656599/toc\:.pdf
 .UE
 .P
-XPG3\-XPG4 Base Migration Guide, Version 2 (1995).
+XPG3-XPG4 Base Migration Guide, Version 2 (1995).
 .br
 .UR https://\:archive\:.opengroup\:.org/publications/archive/CDROM/g501\:.pdf
 .UE
