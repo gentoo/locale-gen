@@ -214,19 +214,18 @@ sub parse_opts ($known_prefix, @args) {
 }
 
 sub select_config_files ($prefix, %opt) {
-	my $path1 = catfile($prefix, '/etc', 'locale.gen');
-	my $path2 = catfile($prefix, '/usr/share/i18n', 'SUPPORTED');
+	my $fallback_path = catfile($prefix, '/usr/share/i18n', 'SUPPORTED');
 	return do {
 		if (exists $opt{'config'}) {
 			$opt{'config'};
 		} elsif ($opt{'all'}) {
-			$path2;
+			();
 		} elsif (exists $ENV{'LOCALEGEN_CONFIG'}) {
 			$ENV{'LOCALEGEN_CONFIG'};
 		} else {
-			$path1, $path2;
+			catfile($prefix, '/etc', 'locale.gen');
 		}
-	};
+	}, $fallback_path;
 }
 
 sub show_usage (@options) {
