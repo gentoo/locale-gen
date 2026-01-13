@@ -376,7 +376,7 @@ sub parse_config ($fh, $path, $supported_by, $be_strict) {
 		# A well-formed entry must contain either one or two fields. The
 		# first defines the localename. The second defines the charmap.
 		# If the second field is missing, a value of "UTF-8" is assumed.
-		# The <slash> character is forbidden in both fields.
+		# The <slash> character is forbidden within both fields.
 		my @fields = split /\h+/, trim_line($line), 3;
 		my ($locale, $charmap);
 		if (0 < @fields < 3 && ! grep +( m/\// ), @fields) {
