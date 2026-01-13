@@ -18,7 +18,7 @@ use Term::ANSIColor qw(colored);
 use experimental qw(try);
 
 my $PROGRAM = basename(__FILE__);
-my $VERSION = '3.9';
+my $VERSION = '3.10';
 
 my $DEFERRED_SIGNAL = '';
 my $PID = $$;
