@@ -31,16 +31,16 @@ A \fIcharmap\fR represents a mapping of character symbols and collating element 
 The complete list of supported \fIcharmap\fR values can be obtained by reading the second column of the \fI/usr/share/i18n/SUPPORTED\fR file. The values map directly to the names of files within the \fI/usr/share/i18n/charmaps\fR directory.
 .SH "EXAMPLES"
 .EX
-# The following three declarations are considered as identical.
-en_US.UTF-8  UTF-8 # trailing comments are permitted
-en_US        UTF-8 # the charmap may be omitted from the localename
-en_US              # the charmap is taken as UTF-8
+# These three declarations are considered identical.
+en_US.UTF-8 UTF-8 # trailing comments are allowed
+en_US       UTF-8 # redundant charmap omitted
+en_US             # charmap taken as UTF-8
 .sp
 # Other charmaps may be specified (not recommended).
-en_US        ISO-8859-1
+en_US       ISO-8859-1
 .sp
-# Invalid because the localename/charmap pair is unsupported.
-en_US        GB2312
+# This localename/charmap pair is invalid.
+en_US       GB2312
 .EE
 .SH "FILES"
 .TP
