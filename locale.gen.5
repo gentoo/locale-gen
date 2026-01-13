@@ -2,9 +2,9 @@
 .SH "NAME"
 locale.gen \[em] configuration file for locale-gen
 .SH "DESCRIPTION"
-The \fBlocale-gen\fR(8) utility compiles the locales specified by the \fI/etc/locale.gen\fR file and integrates them into a locale archive.
+The \fB\%locale-\:\%gen\fR(8) utility compiles the locales specified by the \fI\%/etc/\:\%locale.gen\fR file and integrates them into a locale archive.
 .P
-The file is comprised of zero or more lines containing one or two fields separated by one or more <blank> characters. The first field defines the \fIlocalename\fR. The second field defines the \fIcharmap\fR, also known as a character set or codeset. The <slash> character is forbidden within both fields. If only one field is specified, the \fIcharmap\fR value shall be taken as "UTF-8".
+The file is comprised of zero or more lines containing one or two fields separated by one or more <blank> characters. The first field defines the \fI\%localename\fR. The second field defines the \fI\%charmap\fR, also known as a character set or codeset. The <slash> character is forbidden within both fields. If only one field is specified, the \fI\%charmap\fR value shall be taken as "UTF-8".
 .P
 Empty lines and lines beginning with zero or more <blank> characters followed by a <number-sign> character shall be ignored.
 .P
@@ -12,10 +12,10 @@ A <number-sign> character surrounded by <blank> characters may appear after the 
 .P
 The definition of a <blank> character is that it is either the <tab> or <space> character.
 .P
-Consult the provided \fI/usr/share/i18n/SUPPORTED\fR file for all valid combinations of the \fIlocalename\fR field and \fIcharmap\fR field.
+Consult the provided \fI\%/usr/share/i18n/\:\%SUPPORTED\fR file for all valid combinations of the \fI\%localename\fR field and \fI\%charmap\fR field.
 .P
 .SH "LOCALE NAMES"
-A valid \fIlocalename\fR is of the following format:
+A valid \fI\%localename\fR is of the following format:
 .P
 .RS
 .EX
@@ -23,12 +23,12 @@ language[_territory][.charmap][@modifier]
 .EE
 .RE
 .P
-The complete list of supported \fIlanguage[_territory][@modifier]\fR values can be obtained by reading the first column of the \fI/usr/share/i18n/SUPPORTED\fR file. The values map directly to the names of files within the \fI/usr/share/i18n/locales\fR directory.
+The complete list of supported \fI\%language\:\%[_territory]\:\%[@modifier]\fR values can be obtained by reading the first column of the \fI\%/usr/share/i18n/\:\%SUPPORTED\fR file. The values map directly to the names of files within the \fI\%/usr/share/i18n/\:\%locales\fR directory.
 .P
 .SH "CHARACTER MAPS"
-A \fIcharmap\fR represents a mapping of character symbols and collating element symbols to actual character encodings that enables a standard way to decode, process, and encode text.
+A \fI\%charmap\fR represents a mapping of character symbols and collating element symbols to actual character encodings that enables a standard way to decode, process, and encode text.
 .P
-The complete list of supported \fIcharmap\fR values can be obtained by reading the second column of the \fI/usr/share/i18n/SUPPORTED\fR file. The values map directly to the names of files within the \fI/usr/share/i18n/charmaps\fR directory.
+The complete list of supported \fI\%charmap\fR values can be obtained by reading the second column of the \fI\%/usr/share/i18n/\:\%SUPPORTED\fR file. The values map directly to the names of files within the \fI\%/usr/share/i18n/\:\%charmaps\fR directory.
 .SH "EXAMPLES"
 .EX
 # These three declarations are considered identical.
@@ -47,36 +47,36 @@ en_US       GB2312
 .I /etc/locale.gen
 The default location of the configuration file.
 .TP
-.I /usr/share/i18n/SUPPORTED
-A list of supported \fIlocalename\fR and \fIcharmap\fR combinations.
+.I \%/usr/share/i18n/\:\%SUPPORTED
+A list of supported \fI\%localename\fR and \fI\%charmap\fR combinations.
 .TP
-.I /usr/share/i18n/locales
-Contains locale definition files that serve as inputs to \fBlocaledef\fR(1).
+.I \%/usr/share/i18n/\:\%locales
+Contains locale definition files that serve as inputs to \fB\%localedef\fR(1).
 .TP
-.I /usr/share/i18n/charmaps
-Contains character map files that serve as inputs to \fBlocaledef\fR(1).
+.I \%/usr/share/i18n/\:\%charmaps
+Contains character map files that serve as inputs to \fB\%localedef\fR(1).
 .SH "SEE ALSO"
-.BR locale-gen (8),
-.BR localectl (1),
-.BR locale (1),
-.BR localedef (1)
+.BR \%locale-gen (8),
+.BR \%localectl (1),
+.BR \%locale (1),
+.BR \%localedef (1)
 .SH "STANDARDS"
 System Interface Definitions, Issue 4, Version 2 (XBD) (1994)
 .br
-.UR https:\://pubs\:.opengroup\:.org/onlinepubs/009656599/toc\:.pdf
+.UR https://\:pubs.opengroup.org/\:onlinepubs/\:009656599/\:toc.pdf
 .UE
 .P
 XPG3-XPG4 Base Migration Guide, Version 2 (1995).
 .br
-.UR https://\:archive\:.opengroup\:.org/publications/archive/CDROM/g501\:.pdf
+.UR https://\:archive.opengroup.org/\:publications/\:archive/\:CDROM/\:g501.pdf
 .UE
 .P
 The Open Group Standard Base Specifications, Issue 8 (POSIX-1.2024).
 .br
-.UR https://\:pubs\:.opengroup\:.org/onlinepubs/9799919799/basedefs/V1\:_chap03\:.html
+.UR https://\:pubs.opengroup.org/\:onlinepubs/\:9799919799/\:basedefs/\:V1_chap03.html
 .UE
 .br
-.UR https://\:pubs\:.opengroup\:.org/onlinepubs/9799919799/basedefs/V1\:_chap07\:.html
+.UR https://\:pubs.opengroup.org/\:onlinepubs/\:9799919799/\:basedefs/\:V1_chap07.html
 .UE
 .SH "AUTHORS"
 .MT kfm@\:plushkava\:.net

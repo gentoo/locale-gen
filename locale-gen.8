@@ -20,25 +20,25 @@ locale-gen \[em] safely compile and install a glibc locale archive
 .B -V
 .YS
 .SH "DESCRIPTION"
-The locale-gen utility provides a means by which a system administrator may conveniently manage the set of locales that are made available to the GNU C Library. It accomplishes this by acting as a user-friendly frontend for the \fBlocaledef\fR(1) utility, which is used to compile locales and integrate them into a central archive.
+The \%locale-\:\%gen utility provides a means by which a system administrator may conveniently manage the set of locales that are made available to the GNU C Library. It accomplishes this by acting as a user-friendly frontend for the \fB\%localedef\fR(1) utility, which is used to compile locales and integrate them into a central archive.
 .P
-By default, locale-gen generates an archive containing a full complement of supported locales, numbering 500 or more. However, it is typical for an administrator to require only a few of them. In that case, the \fIconfig\fR file may be populated with a list of the required locales. Consequently, locale-gen shall compile only those, saving both time and space in the longer term.
+By default, \%locale-\:\%gen generates an archive containing a full complement of supported locales, numbering 500 or more. However, it is typical for an administrator to require only a few of them. In that case, the \fIconfig\fR file may be populated with a list of the required locales. Consequently, \%locale-\:\%gen shall compile only those, saving both time and space in the longer term.
 .SH "OPTIONS"
 .TP
 \fB-A\fR, \fB--all\fR
 Compile all locales that are officially supported by glibc. Cannot be combined with the \fB-c\fR option.
 .TP
 \fB-c\fR, \fB--config\fR \fIconfig\fR
-Read the given \fIconfig\fR file (defaults to \fIprefix\fR/etc/locale.gen). If specified as a \%<hyphen-minus>, the configuration shall be read from standard input. If the file contains no locales or is missing, locale-gen shall act as if the \fB-A\fR option had been specified.
+Read the given \fI\%config\fR file (defaults to \fI\%prefix\fR/\:\%etc/\:\%locale.gen). If specified as a <hyphen-minus>, the configuration shall be read from standard input. If the file contains no locales or is missing, \%locale-\:\%gen shall act as if the \fB-A\fR option had been specified.
 .TP
 \fB-h\fR, \fB--help\fR
 Write out a synopsis and summary of the supported options then exit.
 .TP
 \fB-j\fR, \fB--jobs\fR \fIjobs\fR
-Spawn up to the specified number of \fIjobs\fR to compile locales in parallel (defaults to the number of logical processors).
+Spawn up to the specified number of \fI\%jobs\fR to compile locales in parallel (defaults to the number of logical processors).
 .TP
 \fB-p\fR, \fB--prefix\fR \fIprefix\fR
-Treat FILES as being relative to the specified \fIprefix\fR (defaults to / if not a Gentoo Prefix system). Where explicitly specified, the \fIconfig\fR file shall be exempted from this behaviour.
+Treat \%FILES as being relative to the specified \fI\%prefix\fR (defaults to / if not a Gentoo Prefix system). Where explicitly specified, the \fI\%config\fR file shall be exempted from this behaviour.
 .TP
 \fB-q\fR, \fB--quiet\fR
 Suppress the writing of informational messages to standard output.
@@ -50,29 +50,29 @@ Suppress the compilation of locales that are already installed (not recommended)
 Write out some details regarding the program then exit.
 .SH "FILES"
 .TP
-.I /etc/locale.gen
-The default location of the \fIconfig\fR file. It specifies the locales to be compiled.
+.I \%/etc/\:\%locale.gen
+The default location of the \fI\%config\fR file. It specifies the locales to be compiled.
 .TP
-.I /usr/share/i18n/SUPPORTED
+.I \%/usr/share/i18n/\:\%SUPPORTED
 A complete list of valid locale declarations, as provided by glibc.
 .TP
-.I /usr/lib/locale/locale-archive
+.I \%/usr/lib/locale/\:\%locale-archive
 Contains the currently installed locales.
 .TP
-.I /usr/share/i18n/locales
-Contains locale definition files that serve as inputs to \fBlocaledef\fR(1).
+.I \%/usr/share/i18n/\:\%locales
+Contains locale definition files that serve as inputs to \fB\%localedef\fR(1).
 .TP
-.I /usr/share/i18n/charmaps
-Contains character map files that serve as inputs to \fBlocaledef\fR(1).
+.I \%/usr/share/i18n/\:\%charmaps
+Contains character map files that serve as inputs to \fB\%localedef\fR(1).
 .SH "ENVIRONMENT"
 .TP
-LOCALEGEN_ALLOW_UNSUPPORTED
-If set as a non-empty string, locale-gen shall convey validation errors as warnings. Validation is performed by comparing the entries of the \fIconfig\fR file against the \fI/usr/share/i18n/SUPPORTED\fR file.
+\%LOCALEGEN_\:\%ALLOW_\:\%UNSUPPORTED
+If set as a non-empty string, \%locale-\:\%gen shall convey validation errors as warnings. Validation is performed by comparing the entries of the \fI\%config\fR file against the \fI\%/usr/share/i18n/\:\%SUPPORTED\fR file.
 .TP
-LOCALEGEN_CONFIG
-Defines the path of the \fIconfig\fR file in the absence of the \fB-A\fR and \fB-c\fR options.
+\%LOCALEGEN_\:\%CONFIG
+Defines the path of the \fI\%config\fR file in the absence of the \fB-A\fR and \fB-c\fR options.
 .TP
-NO_COLOR
+\%NO_\:\%COLOR
 If set as a non-empty string, coloured output shall be disabled.
 .SH "EXIT STATUS"
 The exit status shall be 0 under any of these conditions:
@@ -81,14 +81,14 @@ the \fB-h\fR and/or \fB-V\fR options were specified
 .IP \[bu] 2
 the \fB-u\fR option was specified but no locales need compiling
 .IP \[bu] 2
-the options and \fIconfig\fR were validated, the specified locales compiled and the resulting archive installed, without error
+the options and \fI\%config\fR were validated, the specified locales compiled and the resulting archive installed, without error
 .P
 Otherwise, the exit status shall be greater than 0.
 .SH "SEE ALSO"
-.BR locale.gen (5),
-.BR localectl (1),
-.BR locale (1),
-.BR localedef (1)
+.BR \%locale.gen (5),
+.BR \%localectl (1),
+.BR \%locale (1),
+.BR \%localedef (1)
 .SH "AUTHORS"
 .MT kfm@\:plushkava\:.net
 Kerin Millar
