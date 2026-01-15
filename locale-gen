@@ -589,13 +589,9 @@ sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 
 	# If a prior archive exists, attempt to preserve its SELinux label.
 	if ($has_seclabels && $has_archive) {
-		my $action = 'copying the security context of the previous archive';
-		if (can_run('chcon')) {
-			print ucfirst "$action ...\n";
+		do_if_runnable('chcon', sub {
 			copy_security_context($dst_path, $interim_path);
-		} else {
-			print_warning("Not $action because chcon(1) is unavailable.\n");
-		}
+		}, 'copying the security context of the previous archive');
 	}
 
 	# Activate the new archive by atomically renaming it into place.
@@ -605,13 +601,9 @@ sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 
 	# If no prior archive existed, restore the appropriate SELinux label.
 	if ($has_seclabels && ! $has_archive && $may_reset_labels) {
-		my $action = 'restoring the default security context of the archive';
-		if (can_run('restorecon')) {
-			print ucfirst "$action ...\n";
+		do_if_runnable('restorecon', sub {
 			run('restorecon', '-Fmv', '--', $dst_path);
-		} else {
-			print_warning("Not $action because restorecon(8) is unavailable.\n");
-		}
+		}, 'restoring the default security context of the archive');
 	}
 
 	# Return the size of the archive, in bytes.
@@ -619,6 +611,15 @@ sub install_archive ($src_path, $dst_path, $may_reset_labels) {
 		die "$PROGRAM: Can't stat '$dst_path': $!\n";
 	} else {
 		return $stat[7];
+	}
+}
+
+sub do_if_runnable ($bin, $callback, $action) {
+	if (can_run($bin)) {
+		print ucfirst "$action ...\n";
+		$callback->();
+	} else {
+		print_warning("Not $action because '$bin' is unavailable.\n");
 	}
 }
 
