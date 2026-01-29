@@ -542,7 +542,7 @@ sub generate_archive ($gentoo_prefix, $locale_dir, $prior_archive, @names) {
 	if (! defined(my $pid = open my $pipe, '-|')) {
 		die "Can't fork: $!";
 	} elsif ($pid == 0) {
-		if (! open *STDERR, '>&=', *STDOUT) {
+		if (! open *STDERR, '>&=', \*STDOUT) {
 			die "Can't direct STDERR to STDOUT: $!\n";
 		}
 		run(qw( localedef --prefix . --quiet --add-to-archive -- ), @names);
