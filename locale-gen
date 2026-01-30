@@ -11,7 +11,7 @@ use Errno qw(ENOENT);
 use File::Spec::Functions qw(canonpath catfile catdir path splitpath);
 use File::Temp qw(tempdir);
 use Getopt::Long ();
-use List::Util qw(all any first min);
+use List::Util qw(all any first max min);
 use Term::ANSIColor qw(colored);
 
 # Formally stable as of v5.40; sufficiently functional in both v5.36 and v5.38.
@@ -230,18 +230,13 @@ sub select_config_files ($prefix, %opt) {
 
 sub show_usage (@options) {
 	print "Usage: locale-gen [OPTION]...\n\n";
-	my $pipe;
-	if (! open $pipe, "| column -t -s \037") {
-		exit 1;
-	} else {
-		for my $row (@options) {
-			my ($spec, $description) = $row->@*;
-			my ($long, $short) = split /[|=]/, $spec;
-			printf {$pipe} "-%s, --%s\037%s\n", $short, $long, $description;
-		}
-		close $pipe;
-		print "\nSee also: locale-gen(8), locale.gen(5)\n";
+	my $width = 4 + max(map +( length $_->[0] =~ s/=.+//r ), @options);
+	for my $row (@options) {
+		my ($spec, $description) = $row->@*;
+		my ($long, $short) = split /[|=]/, $spec;
+		printf "%-*s  %s\n", $width, "-$short, --$long", $description;
 	}
+	print "\nSee also: locale-gen(8), locale.gen(5)\n";
 }
 
 sub show_version () {
