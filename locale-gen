@@ -701,8 +701,7 @@ sub get_username () {
 }
 
 sub round ($number) {
-	# Evaluation conveniently trims insignificant trailing zeroes.
-	return eval(sprintf '%.2f', $number);
+	return 0 + sprintf '%.2f', $number;
 }
 
 sub basename ($path) {
